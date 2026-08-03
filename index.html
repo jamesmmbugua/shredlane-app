@@ -315,6 +315,41 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
 .tl-main{font-size:18px;font-weight:800;color:var(--grn);font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px}
 .tl-sub{font-size:11px;color:var(--gry);margin-top:3px}
 
+/* WORKOUT TRACKER */
+.wkt-hdr-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.wkt-title-in{flex:1;padding:12px 13px;background:var(--dark2);border:1.5px solid var(--bdr2);border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--wht)}
+.wkt-title-in:focus{outline:none;border-color:var(--grn)}
+.wkt-title-in::placeholder{color:var(--gry2);font-family:'Barlow',sans-serif;font-weight:400;font-size:14px}
+.ex-card{background:var(--dark2);border:1px solid var(--bdr2);border-radius:12px;padding:12px;margin-bottom:10px}
+.ex-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ex-name-in{flex:1;padding:10px 12px;background:var(--dark3);border:1.5px solid var(--bdr2);border-radius:8px;font-family:'Barlow',sans-serif;font-size:14px;font-weight:600;color:var(--wht)}
+.ex-name-in:focus{outline:none;border-color:var(--grn)}
+.ex-name-in::placeholder{color:var(--gry2);font-weight:400}
+.ex-del{background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;padding:4px 6px;line-height:1;flex-shrink:0}
+.set-row{display:grid;grid-template-columns:24px 1fr 1fr 26px;gap:6px;align-items:center;margin-bottom:6px}
+.set-n{font-family:'DM Mono',monospace;font-size:11px;color:var(--gry);text-align:center}
+.set-in{width:100%;padding:8px 9px;background:var(--dark3);border:1.5px solid var(--bdr2);border-radius:7px;font-family:'DM Mono',monospace;font-size:13px;color:var(--wht);-webkit-appearance:none}
+.set-in:focus{outline:none;border-color:var(--grn)}
+.set-in::placeholder{color:var(--gry2);font-family:'Barlow',sans-serif;font-size:11px}
+.set-del{background:none;border:none;color:var(--gry);font-size:15px;cursor:pointer;padding:2px}
+.set-hdr-row{display:grid;grid-template-columns:24px 1fr 1fr 26px;gap:6px;margin-bottom:5px}
+.set-hdr-lbl{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gry2);text-align:center}
+.add-set-btn{width:100%;padding:8px;background:var(--grn-dim);border:1px dashed rgba(126,224,0,.35);border-radius:8px;color:var(--grn);font-family:'Barlow',sans-serif;font-size:12px;font-weight:700;cursor:pointer;margin-top:2px}
+.add-ex-btn{width:100%;padding:13px;background:var(--dark2);border:1.5px dashed var(--bdr2);border-radius:10px;color:var(--txt);font-family:'Barlow',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px;transition:all .15s}
+.add-ex-btn:active{transform:scale(.98)}
+.wkt-log-card{background:var(--dark);border:1px solid var(--bdr);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.wkt-log-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.wkt-log-date{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;color:var(--grn);text-transform:uppercase;letter-spacing:.04em}
+.wkt-log-title{font-size:15px;font-weight:700;color:var(--wht);margin-top:2px}
+.wkt-log-meta{font-size:11px;color:var(--gry);margin-top:2px}
+.wkt-log-acts{display:flex;gap:6px;flex-shrink:0}
+.wkt-icn-btn{background:var(--dark2);border:1px solid var(--bdr2);border-radius:7px;width:30px;height:30px;font-size:13px;color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.wkt-ex-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--bdr)}
+.wkt-ex-nm{font-size:13px;font-weight:600;color:var(--txt)}
+.wkt-ex-sets{font-family:'DM Mono',monospace;font-size:11px;color:var(--gry)}
+.wkt-empty{text-align:center;padding:32px 16px;color:var(--gry);font-size:13px}
+.wkt-stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+
 /* TOAST */
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--dark2);color:var(--wht);border:1px solid var(--bdr2);padding:10px 20px;border-radius:28px;font-size:13px;font-weight:600;opacity:0;transition:all .3s;white-space:nowrap;z-index:9999;pointer-events:none;box-shadow:0 8px 32px rgba(0,0,0,.6);}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -454,6 +489,7 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
     <button class="tb active" onclick="goTab('dashboard',this)"><span class="tb-i">📊</span><span class="tb-l">Dashboard</span></button>
     <button class="tb" onclick="goTab('checkin',this)"><span class="tb-i">✏️</span><span class="tb-l">Check-in</span></button>
     <button class="tb" onclick="goTab('history',this)"><span class="tb-i">📅</span><span class="tb-l">History</span></button>
+    <button class="tb" id="tbWorkouts" onclick="goTab('workouts',this)"><span class="tb-i">🏋️</span><span class="tb-l">Workouts</span></button>
     <button class="tb" onclick="goTab('about',this)"><span class="tb-i">ℹ️</span><span class="tb-l">About</span></button>
     <button class="tb" id="adminTab" style="display:none" onclick="goTab('admin',this)"><span class="tb-i">🔧</span><span class="tb-l">Admin</span></button>
   </div>
@@ -609,6 +645,7 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
         <button class="wkt-btn" id="wktNo" onclick="setWorkout(false)">✗ NO</button>
         <button class="wkt-btn" id="wktYes" onclick="setWorkout(true)">✓ YES</button>
       </div>
+      <button class="cal-toggle-btn" style="margin-top:10px" onclick="goToWorkoutsFromCI()">📋 Log exercises, sets & reps →</button>
     </div>
 
     <div class="card">
@@ -644,6 +681,28 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
         <tbody id="histBody"><tr><td colspan="6" style="text-align:center;padding:28px;color:var(--gry);font-family:Barlow,sans-serif">No check-ins yet</td></tr></tbody></table>
       </div>
     </div>
+  </div>
+
+  <!-- WORKOUTS -->
+  <div class="scr" id="scr-workouts">
+    <div class="scr-ttl">WORKOUTS</div>
+    <div class="scr-sub">Log exercises with sets, reps & weight</div>
+
+    <div class="wkt-stats-row" id="wktStatsRow"></div>
+
+    <div class="card">
+      <div class="wkt-hdr-row">
+        <input class="wkt-title-in" id="wktTitleIn" placeholder="Workout name (e.g. Push Day)">
+        <input class="dp-native" id="wktDateIn" type="date" style="width:150px;margin-top:0" onchange="onWktDateChange()">
+      </div>
+      <div id="exList"></div>
+      <button class="add-ex-btn" onclick="addExercise()">＋ Add Exercise</button>
+      <button class="save-btn" id="saveWktBtn" onclick="saveWorkout()">🏋️ Save Workout</button>
+      <div style="text-align:center;margin-top:8px" id="cancelEditWrap"></div>
+    </div>
+
+    <div class="scr-sub" style="margin-top:18px;margin-bottom:8px">Workout Log</div>
+    <div id="wktHistList"></div>
   </div>
 
   <!-- ABOUT -->
@@ -717,9 +776,10 @@ const fdb = firebase.firestore();
 // In-memory mirror of the cloud DB, kept live via onSnapshot listeners.
 // gDB() is used throughout the app exactly like before — it now just
 // returns this synced cache, so the rest of the app barely changes.
-let CACHE = {users:{}, checkins:{}};
+let CACHE = {users:{}, checkins:{}, workouts:{}};
 let fbReady = false;
 let checkinsReady = false;
+let workoutsReady = false;
 
 function gDB(){return CACHE}
 function today(){return new Date().toISOString().slice(0,10)}
@@ -739,6 +799,7 @@ function onDataUpdate(){
   if(activeScr.id==='scr-admin') renderAdmin();
   if(activeScr.id==='scr-dashboard') renderDash();
   if(activeScr.id==='scr-history') renderHistory();
+  if(activeScr.id==='scr-workouts') renderWorkoutsScreen();
 }
 
 // Live listeners — every device sees the same data in (near) real time.
@@ -765,6 +826,17 @@ fdb.collection('checkins').onSnapshot(snap=>{
   });
   CACHE.checkins=checkins;
   checkinsReady=true;
+  onDataUpdate();
+},err=>console.error(err));
+
+fdb.collection('workouts').onSnapshot(snap=>{
+  const workouts={};
+  snap.forEach(doc=>{
+    const data=doc.data();
+    workouts[doc.id]=(data&&Array.isArray(data.entries))?data.entries.filter(e=>e&&e.date&&e.id):[];
+  });
+  CACHE.workouts=workouts;
+  workoutsReady=true;
   onDataUpdate();
 },err=>console.error(err));
 
@@ -875,8 +947,8 @@ function doLogout(){
 // TABS
 // ═══════════════════════════════════════
 function goTab(name,btn){
-  if(name==='checkin' && CU && CU.status==='pending'){
-    toast('⏳ Check-ins unlock once the coach approves your account.','a');
+  if((name==='checkin'||name==='workouts') && CU && CU.status==='pending' && !VIEWUSER){
+    toast('⏳ This unlocks once the coach approves your account.','a');
     return;
   }
   if(btn)VIEWUSER=null; // clear coach "view as" when navigating via the bottom nav
@@ -888,12 +960,21 @@ function goTab(name,btn){
   if(name==='dashboard')renderDash();
   if(name==='history')renderHistory();
   if(name==='checkin')initCI();
+  if(name==='workouts')initWorkoutForm();
   if(name==='admin'){
     renderAdmin();
     // If checkins haven't loaded yet, retry once after 1.5s
     if(!checkinsReady){
       setTimeout(()=>{ if(document.getElementById('scr-admin').classList.contains('active')) renderAdmin(); }, 1500);
     }
+  }
+}
+
+function goToWorkoutsFromCI(){
+  const wktBtn=document.getElementById('tbWorkouts');
+  goTab('workouts',wktBtn);
+  if(typeof selectedDate!=='undefined' && selectedDate){
+    setTimeout(()=>{ const di=document.getElementById('wktDateIn'); if(di){di.value=selectedDate;onWktDateChange();} },0);
   }
 }
 
@@ -1151,6 +1232,159 @@ async function saveCI(){
     toast('⚠️ Could not save — check your connection','r');
   }
 }
+
+// ═══════════════════════════════════════
+// WORKOUT TRACKER
+// ═══════════════════════════════════════
+function myWorkouts(){const u=VIEWUSER||CU;if(!u)return[];const v=gDB().workouts[u.email];return Array.isArray(v)?v:[]}
+
+let wktBuilder={id:null,date:today(),title:'',exercises:[]};
+
+function newExercise(){return{name:'',sets:[{reps:'',weight:''}]}}
+
+function initWorkoutForm(){
+  wktBuilder={id:null,date:today(),title:'',exercises:[newExercise()]};
+  document.getElementById('wktTitleIn').value='';
+  document.getElementById('wktDateIn').value=today();
+  document.getElementById('cancelEditWrap').innerHTML='';
+  document.getElementById('saveWktBtn').textContent='🏋️ Save Workout';
+  renderExerciseBuilder();
+  renderWorkoutsScreen();
+}
+
+function onWktDateChange(){
+  wktBuilder.date=document.getElementById('wktDateIn').value||today();
+}
+
+function renderExerciseBuilder(){
+  const el=document.getElementById('exList');
+  if(!el)return;
+  if(!wktBuilder.exercises.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--gry);padding:8px 0 12px">No exercises yet — add one below</div>';
+    return;
+  }
+  el.innerHTML=wktBuilder.exercises.map((ex,ei)=>`
+    <div class="ex-card">
+      <div class="ex-hdr">
+        <input class="ex-name-in" placeholder="Exercise name (e.g. Bench Press)" value="${escAttr(ex.name)}" oninput="updateExName(${ei},this.value)">
+        <button class="ex-del" onclick="removeExercise(${ei})" title="Remove exercise">✕</button>
+      </div>
+      <div class="set-hdr-row">
+        <div></div><div class="set-hdr-lbl">Reps</div><div class="set-hdr-lbl">Weight (kg)</div><div></div>
+      </div>
+      ${ex.sets.map((s,si)=>`
+        <div class="set-row">
+          <div class="set-n">${si+1}</div>
+          <input class="set-in" type="number" inputmode="numeric" placeholder="reps" value="${s.reps!==''&&s.reps!=null?s.reps:''}" oninput="updateSet(${ei},${si},'reps',this.value)">
+          <input class="set-in" type="number" inputmode="decimal" step="0.5" placeholder="kg" value="${s.weight!==''&&s.weight!=null?s.weight:''}" oninput="updateSet(${ei},${si},'weight',this.value)">
+          <button class="set-del" onclick="removeSet(${ei},${si})" title="Remove set">✕</button>
+        </div>`).join('')}
+      <button class="add-set-btn" onclick="addSet(${ei})">＋ Add Set</button>
+    </div>`).join('');
+}
+
+function escAttr(v){return (v==null?'':String(v)).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+
+function addExercise(){wktBuilder.exercises.push(newExercise());renderExerciseBuilder();}
+function removeExercise(ei){wktBuilder.exercises.splice(ei,1);renderExerciseBuilder();}
+function updateExName(ei,v){if(wktBuilder.exercises[ei])wktBuilder.exercises[ei].name=v;}
+function addSet(ei){const ex=wktBuilder.exercises[ei];if(!ex)return;const last=ex.sets[ex.sets.length-1];ex.sets.push({reps:last?last.reps:'',weight:last?last.weight:''});renderExerciseBuilder();}
+function removeSet(ei,si){const ex=wktBuilder.exercises[ei];if(!ex)return;ex.sets.splice(si,1);if(!ex.sets.length)ex.sets.push({reps:'',weight:''});renderExerciseBuilder();}
+
+async function saveWorkout(){
+  if(!CU)return;
+  if(CU.status==='pending'&&!VIEWUSER){toast('⏳ Your account is awaiting coach approval.','a');return;}
+  const u=VIEWUSER||CU;
+  const title=document.getElementById('wktTitleIn').value.trim();
+  const d=document.getElementById('wktDateIn').value||today();
+  const exercises=wktBuilder.exercises
+    .map(ex=>({name:ex.name.trim(),sets:ex.sets.map(s=>({reps:s.reps===''?null:parseInt(s.reps),weight:s.weight===''?null:parseFloat(s.weight)})).filter(s=>s.reps||s.weight)}))
+    .filter(ex=>ex.name&&ex.sets.length);
+  if(!exercises.length){toast('Add at least one exercise with a set','r');return;}
+  const raw=gDB().workouts[u.email];
+  const list=(Array.isArray(raw)?raw:[]).filter(e=>e&&e.date&&e.id).slice();
+  const entry={id:wktBuilder.id||('w'+Date.now()),date:d,title,exercises};
+  const idx=list.findIndex(w=>w.id===entry.id);
+  if(idx>=0)list[idx]=entry;else list.push(entry);
+  try{
+    await fdb.collection('workouts').doc(u.email).set({entries:list});
+    CACHE.workouts[u.email]=list;
+    toast(idx>=0?'🏋️ Workout updated!':'🏋️ Workout saved!','g');
+    initWorkoutForm();
+  }catch(e){
+    console.error(e);
+    toast('⚠️ Could not save — check your connection','r');
+  }
+}
+
+function editWorkout(id){
+  const w=myWorkouts().find(x=>x.id===id);
+  if(!w)return;
+  wktBuilder={id:w.id,date:w.date,title:w.title||'',exercises:w.exercises.map(ex=>({name:ex.name,sets:ex.sets.map(s=>({reps:s.reps??'',weight:s.weight??''}))}))};
+  document.getElementById('wktTitleIn').value=w.title||'';
+  document.getElementById('wktDateIn').value=w.date;
+  document.getElementById('saveWktBtn').textContent='💾 Update Workout';
+  document.getElementById('cancelEditWrap').innerHTML='<button class="cal-toggle-btn" onclick="initWorkoutForm()">✕ Cancel edit</button>';
+  renderExerciseBuilder();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function deleteWorkout(id){
+  if(!CU)return;
+  const u=VIEWUSER||CU;
+  if(!confirm('Delete this workout entry?'))return;
+  const raw=gDB().workouts[u.email];
+  const list=(Array.isArray(raw)?raw:[]).filter(e=>e&&e.id&&e.id!==id);
+  try{
+    await fdb.collection('workouts').doc(u.email).set({entries:list});
+    CACHE.workouts[u.email]=list;
+    toast('Workout deleted','r');
+    renderWorkoutsScreen();
+  }catch(e){console.error(e);toast('⚠️ Could not delete — check connection','r');}
+}
+
+function renderWorkoutsScreen(){
+  if(!CU)return;
+  const list=[...myWorkouts()].sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
+
+  // Stats row
+  const stEl=document.getElementById('wktStatsRow');
+  if(stEl){
+    const totalSets=list.reduce((s,w)=>s+w.exercises.reduce((s2,ex)=>s2+ex.sets.length,0),0);
+    const last30=list.filter(w=>{const dd=(new Date()-new Date(w.date+'T00:00:00'))/86400000;return dd<=30;}).length;
+    stEl.innerHTML=`
+      <div class="met" style="padding:12px"><div class="met-lbl">Total Workouts</div><div class="met-val" style="font-size:24px">${list.length}</div></div>
+      <div class="met" style="padding:12px"><div class="met-lbl">Last 30 Days</div><div class="met-val" style="font-size:24px">${last30}</div></div>
+      <div class="met" style="padding:12px"><div class="met-lbl">Total Sets</div><div class="met-val" style="font-size:24px">${totalSets}</div></div>`;
+  }
+
+  const hl=document.getElementById('wktHistList');
+  if(!hl)return;
+  if(!list.length){
+    hl.innerHTML='<div class="card wkt-empty">🏋️ No workouts logged yet — add exercises above to start tracking.</div>';
+    return;
+  }
+  hl.innerHTML=list.map(w=>{
+    const dstr=new Date(w.date+'T00:00:00').toLocaleDateString('en-KE',{weekday:'short',day:'2-digit',month:'short'});
+    const setCount=w.exercises.reduce((s,ex)=>s+ex.sets.length,0);
+    return `<div class="wkt-log-card">
+      <div class="wkt-log-top">
+        <div>
+          <div class="wkt-log-date">${dstr}</div>
+          <div class="wkt-log-title">${w.title?escHtml(w.title):(w.exercises[0]?escHtml(w.exercises[0].name):'Workout')}</div>
+          <div class="wkt-log-meta">${w.exercises.length} exercise${w.exercises.length===1?'':'s'} · ${setCount} set${setCount===1?'':'s'}</div>
+        </div>
+        <div class="wkt-log-acts">
+          <button class="wkt-icn-btn" onclick="editWorkout('${w.id}')" title="Edit">✏️</button>
+          <button class="wkt-icn-btn" onclick="deleteWorkout('${w.id}')" title="Delete">🗑️</button>
+        </div>
+      </div>
+      ${w.exercises.map(ex=>`<div class="wkt-ex-row"><span class="wkt-ex-nm">${escHtml(ex.name)}</span><span class="wkt-ex-sets">${ex.sets.map(s=>(s.reps||'—')+'×'+(s.weight!=null?s.weight+'kg':'BW')).join('  ')}</span></div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function escHtml(v){return (v==null?'':String(v)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
 // ═══════════════════════════════════════
 // SPEEDOMETER
@@ -1499,8 +1733,10 @@ async function rejectUser(email){
   try{
     await fdb.collection('users').doc(email).delete();
     await fdb.collection('checkins').doc(email).delete().catch(()=>{});
+    await fdb.collection('workouts').doc(email).delete().catch(()=>{});
     delete CACHE.users[email];
     delete CACHE.checkins[email];
+    delete CACHE.workouts[email];
     toast('Removed '+email,'r');
     renderAdmin();
   }catch(e){console.error(e);toast('⚠️ Could not remove — check connection','r');}
