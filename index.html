@@ -350,6 +350,43 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
 .wkt-empty{text-align:center;padding:32px 16px;color:var(--gry);font-size:13px}
 .wkt-stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
 
+/* PROGRAMS */
+.prog-day-card{background:var(--dark3);border:1px solid var(--bdr2);border-radius:10px;padding:11px;margin-bottom:9px}
+.prog-day-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.day-name-in{flex:1;padding:9px 11px;background:var(--dark2);border:1.5px solid var(--bdr2);border-radius:7px;font-family:'Barlow',sans-serif;font-size:13px;font-weight:600;color:var(--wht)}
+.day-name-in:focus{outline:none;border-color:var(--grn)}
+.day-name-in::placeholder{color:var(--gry2);font-weight:400}
+.prog-ex-row{display:grid;grid-template-columns:1fr 52px 62px 24px;gap:6px;margin-bottom:6px;align-items:center}
+.prog-ex-in{width:100%;padding:8px 9px;background:var(--dark2);border:1.5px solid var(--bdr2);border-radius:7px;font-family:'Barlow',sans-serif;font-size:12px;color:var(--wht)}
+.prog-ex-in:focus{outline:none;border-color:var(--grn)}
+.prog-ex-in::placeholder{color:var(--gry2);font-size:11px}
+.add-prog-ex-btn{width:100%;padding:7px;background:var(--dark2);border:1px dashed var(--bdr2);border-radius:7px;color:var(--txt);font-family:'Barlow',sans-serif;font-size:11px;font-weight:700;cursor:pointer}
+.add-prog-day-btn{width:100%;padding:12px;background:var(--grn-dim);border:1px dashed rgba(126,224,0,.35);border-radius:10px;color:var(--grn);font-family:'Barlow',sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px}
+.prog-name-in{width:100%;padding:12px 13px;background:var(--dark2);border:1.5px solid var(--bdr2);border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--wht);margin-bottom:10px}
+.prog-name-in:focus{outline:none;border-color:var(--grn)}
+.prog-name-in::placeholder{color:var(--gry2);font-family:'Barlow',sans-serif;font-weight:400;font-size:14px}
+.prog-desc-in{width:100%;padding:11px 13px;background:var(--dark2);border:1.5px solid var(--bdr2);border-radius:10px;font-family:'Barlow',sans-serif;font-size:13px;color:var(--wht);resize:vertical;margin-bottom:12px}
+.prog-desc-in:focus{outline:none;border-color:var(--grn)}
+.prog-desc-in::placeholder{color:var(--gry2)}
+.prog-admin-card{background:var(--dark);border:1px solid var(--bdr);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.prog-admin-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px}
+.prog-admin-nm{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;color:var(--wht)}
+.prog-admin-desc{font-size:12px;color:var(--gry);margin-bottom:6px;line-height:1.5}
+.prog-admin-meta{font-size:11px;color:var(--gry2)}
+.prog-card{background:var(--dark);border:1px solid var(--bdr);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.prog-card.assigned{border-color:rgba(126,224,0,.4);background:linear-gradient(135deg,rgba(126,224,0,.05),var(--dark))}
+.prog-card-nm{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:var(--wht)}
+.prog-card-desc{font-size:13px;color:var(--gry);margin:5px 0 10px;line-height:1.6}
+.prog-day-mini{background:var(--dark2);border:1px solid var(--bdr);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.prog-day-mini-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.prog-day-mini-nm{font-size:13px;font-weight:800;color:var(--grn);text-transform:uppercase;letter-spacing:.03em}
+.prog-ex-mini-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid var(--bdr)}
+.prog-ex-mini-row:first-of-type{border-top:none}
+.prog-ex-mini-nm{color:var(--txt);font-weight:600}
+.prog-ex-mini-tgt{font-family:'DM Mono',monospace;color:var(--gry)}
+.assigned-badge{display:inline-block;background:var(--grn);color:#000;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:12px}
+.prog-select-sm{padding:6px 8px;background:var(--dark2);border:1px solid var(--bdr2);border-radius:7px;color:var(--txt);font-family:'Barlow',sans-serif;font-size:11px}
+
 /* TOAST */
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--dark2);color:var(--wht);border:1px solid var(--bdr2);padding:10px 20px;border-radius:28px;font-size:13px;font-weight:600;opacity:0;transition:all .3s;white-space:nowrap;z-index:9999;pointer-events:none;box-shadow:0 8px 32px rgba(0,0,0,.6);}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -490,6 +527,7 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
     <button class="tb" onclick="goTab('checkin',this)"><span class="tb-i">✏️</span><span class="tb-l">Check-in</span></button>
     <button class="tb" onclick="goTab('history',this)"><span class="tb-i">📅</span><span class="tb-l">History</span></button>
     <button class="tb" id="tbWorkouts" onclick="goTab('workouts',this)"><span class="tb-i">🏋️</span><span class="tb-l">Workouts</span></button>
+    <button class="tb" id="tbProgram" onclick="goTab('program',this)"><span class="tb-i">📋</span><span class="tb-l">Program</span></button>
     <button class="tb" onclick="goTab('about',this)"><span class="tb-i">ℹ️</span><span class="tb-l">About</span></button>
     <button class="tb" id="adminTab" style="display:none" onclick="goTab('admin',this)"><span class="tb-i">🔧</span><span class="tb-l">Admin</span></button>
   </div>
@@ -705,6 +743,16 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
     <div id="wktHistList"></div>
   </div>
 
+  <!-- PROGRAM -->
+  <div class="scr" id="scr-program">
+    <div class="scr-ttl">PROGRAM</div>
+    <div class="scr-sub">Your training plan</div>
+    <div id="viewAsBannerProgram" style="display:none;background:var(--grn-dim);border:1px solid rgba(126,224,0,.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700;color:var(--grn)">👁️ Coach view — assigning/browsing on this member's behalf</div>
+    <div id="myProgramWrap"></div>
+    <div class="scr-sub" style="margin-top:18px;margin-bottom:8px" id="browseProgHdr">Available Programs</div>
+    <div id="progBrowseList"></div>
+  </div>
+
   <!-- ABOUT -->
   <div class="scr" id="scr-about">
     <div class="scr-ttl">ABOUT</div>
@@ -776,10 +824,11 @@ const fdb = firebase.firestore();
 // In-memory mirror of the cloud DB, kept live via onSnapshot listeners.
 // gDB() is used throughout the app exactly like before — it now just
 // returns this synced cache, so the rest of the app barely changes.
-let CACHE = {users:{}, checkins:{}, workouts:{}};
+let CACHE = {users:{}, checkins:{}, workouts:{}, programs:{}};
 let fbReady = false;
 let checkinsReady = false;
 let workoutsReady = false;
+let programsReady = false;
 
 function gDB(){return CACHE}
 function today(){return new Date().toISOString().slice(0,10)}
@@ -800,6 +849,7 @@ function onDataUpdate(){
   if(activeScr.id==='scr-dashboard') renderDash();
   if(activeScr.id==='scr-history') renderHistory();
   if(activeScr.id==='scr-workouts') renderWorkoutsScreen();
+  if(activeScr.id==='scr-program') renderProgramScreen();
 }
 
 // Live listeners — every device sees the same data in (near) real time.
@@ -837,6 +887,17 @@ fdb.collection('workouts').onSnapshot(snap=>{
   });
   CACHE.workouts=workouts;
   workoutsReady=true;
+  onDataUpdate();
+},err=>console.error(err));
+
+fdb.collection('programs').onSnapshot(snap=>{
+  const programs={};
+  snap.forEach(doc=>{
+    const data=doc.data();
+    if(data&&data.name) programs[doc.id]=Object.assign({id:doc.id},data);
+  });
+  CACHE.programs=programs;
+  programsReady=true;
   onDataUpdate();
 },err=>console.error(err));
 
@@ -947,7 +1008,7 @@ function doLogout(){
 // TABS
 // ═══════════════════════════════════════
 function goTab(name,btn){
-  if((name==='checkin'||name==='workouts') && CU && CU.status==='pending' && !VIEWUSER){
+  if((name==='checkin'||name==='workouts'||name==='program') && CU && CU.status==='pending' && !VIEWUSER){
     toast('⏳ This unlocks once the coach approves your account.','a');
     return;
   }
@@ -961,6 +1022,7 @@ function goTab(name,btn){
   if(name==='history')renderHistory();
   if(name==='checkin')initCI();
   if(name==='workouts')initWorkoutForm();
+  if(name==='program')renderProgramScreen();
   if(name==='admin'){
     renderAdmin();
     // If checkins haven't loaded yet, retry once after 1.5s
@@ -968,6 +1030,12 @@ function goTab(name,btn){
       setTimeout(()=>{ if(document.getElementById('scr-admin').classList.contains('active')) renderAdmin(); }, 1500);
     }
   }
+}
+
+function activateTabButton(id){
+  document.querySelectorAll('.tb').forEach(t=>t.classList.remove('active'));
+  const b=document.getElementById(id);
+  if(b)b.classList.add('active');
 }
 
 function goToWorkoutsFromCI(){
@@ -1239,13 +1307,19 @@ async function saveCI(){
 function myWorkouts(){const u=VIEWUSER||CU;if(!u)return[];const v=gDB().workouts[u.email];return Array.isArray(v)?v:[]}
 
 let wktBuilder={id:null,date:today(),title:'',exercises:[]};
+let pendingWorkoutPrefill=null;
 
 function newExercise(){return{name:'',sets:[{reps:'',weight:''}]}}
 
 function initWorkoutForm(){
-  wktBuilder={id:null,date:today(),title:'',exercises:[newExercise()]};
-  document.getElementById('wktTitleIn').value='';
-  document.getElementById('wktDateIn').value=today();
+  if(pendingWorkoutPrefill){
+    wktBuilder={id:null,date:pendingWorkoutPrefill.date||today(),title:pendingWorkoutPrefill.title,exercises:pendingWorkoutPrefill.exercises};
+    pendingWorkoutPrefill=null;
+  } else {
+    wktBuilder={id:null,date:today(),title:'',exercises:[newExercise()]};
+  }
+  document.getElementById('wktTitleIn').value=wktBuilder.title||'';
+  document.getElementById('wktDateIn').value=wktBuilder.date;
   document.getElementById('cancelEditWrap').innerHTML='';
   document.getElementById('saveWktBtn').textContent='🏋️ Save Workout';
   renderExerciseBuilder();
@@ -1275,7 +1349,7 @@ function renderExerciseBuilder(){
       ${ex.sets.map((s,si)=>`
         <div class="set-row">
           <div class="set-n">${si+1}</div>
-          <input class="set-in" type="number" inputmode="numeric" placeholder="reps" value="${s.reps!==''&&s.reps!=null?s.reps:''}" oninput="updateSet(${ei},${si},'reps',this.value)">
+          <input class="set-in" type="number" inputmode="numeric" placeholder="${s.hint?('target '+escAttr(s.hint)):'reps'}" value="${s.reps!==''&&s.reps!=null?s.reps:''}" oninput="updateSet(${ei},${si},'reps',this.value)">
           <input class="set-in" type="number" inputmode="decimal" step="0.5" placeholder="kg" value="${s.weight!==''&&s.weight!=null?s.weight:''}" oninput="updateSet(${ei},${si},'weight',this.value)">
           <button class="set-del" onclick="removeSet(${ei},${si})" title="Remove set">✕</button>
         </div>`).join('')}
@@ -1385,6 +1459,196 @@ function renderWorkoutsScreen(){
 }
 
 function escHtml(v){return (v==null?'':String(v)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// ═══════════════════════════════════════
+// PROGRAMS — client browse/assign/log, admin builder
+// ═══════════════════════════════════════
+function allPrograms(){return Object.values(gDB().programs||{}).sort((a,b)=>(a.name||'').localeCompare(b.name||''))}
+function myAssignedProgram(){const u=VIEWUSER||CU;if(!u||!u.programId)return null;return gDB().programs[u.programId]||null}
+
+async function assignProgramToUser(email,programId){
+  try{
+    await fdb.collection('users').doc(email).update({programId:programId||null});
+    if(CACHE.users[email])CACHE.users[email].programId=programId||null;
+    toast(programId?'📋 Program assigned':'Program unassigned','g');
+    renderProgramScreen();
+    renderAdmin();
+  }catch(e){console.error(e);toast('⚠️ Could not update — check connection','r');}
+}
+
+function startWorkoutFromProgramDay(programId,dayId){
+  const prog=gDB().programs[programId];if(!prog)return;
+  const day=(prog.days||[]).find(d=>d.id===dayId);if(!day)return;
+  pendingWorkoutPrefill={
+    date:today(),
+    title:(prog.name?prog.name+' — ':'')+day.name,
+    exercises:(day.exercises||[]).map(ex=>({
+      name:ex.name,
+      sets:Array.from({length:Math.max(1,parseInt(ex.targetSets)||3)},()=>({reps:'',weight:'',hint:ex.targetReps||''}))
+    }))
+  };
+  goTab('workouts',null);
+  activateTabButton('tbWorkouts');
+}
+
+function renderProgramScreen(){
+  if(!CU)return;
+  const u=VIEWUSER||CU;
+  const vb=document.getElementById('viewAsBannerProgram');
+  if(vb)vb.style.display=VIEWUSER?'block':'none';
+
+  const mine=myAssignedProgram();
+  const wrap=document.getElementById('myProgramWrap');
+  const browseHdr=document.getElementById('browseProgHdr');
+  if(wrap){
+    if(!mine){
+      wrap.innerHTML=`<div class="card wkt-empty">📋 No program assigned yet — pick one below, or ask your coach to assign one.</div>`;
+    } else {
+      wrap.innerHTML=`<div class="prog-card assigned">
+        <span class="assigned-badge">Your Program</span>
+        <div class="prog-card-nm" style="margin-top:8px">${escHtml(mine.name)}</div>
+        ${mine.description?`<div class="prog-card-desc">${escHtml(mine.description)}</div>`:''}
+        ${(mine.days||[]).map(d=>`
+          <div class="prog-day-mini">
+            <div class="prog-day-mini-hdr">
+              <div class="prog-day-mini-nm">${escHtml(d.name)}</div>
+              <button class="b-secondary" style="width:auto;padding:6px 12px;font-size:11px" onclick="startWorkoutFromProgramDay('${mine.id}','${d.id}')">▶ Log this day</button>
+            </div>
+            ${(d.exercises||[]).map(ex=>`<div class="prog-ex-mini-row"><span class="prog-ex-mini-nm">${escHtml(ex.name)}</span><span class="prog-ex-mini-tgt">${ex.targetSets||'—'}×${escHtml(ex.targetReps||'—')}</span></div>`).join('')||'<div style="font-size:11px;color:var(--gry2)">No exercises listed</div>'}
+          </div>`).join('')||'<div style="font-size:12px;color:var(--gry)">This program has no days yet.</div>'}
+        <button class="cal-toggle-btn" onclick="assignProgramToUser('${u.email}',null)">✕ Unassign this program</button>
+      </div>`;
+    }
+  }
+
+  const list=allPrograms();
+  const bl=document.getElementById('progBrowseList');
+  if(browseHdr)browseHdr.textContent=mine?'Switch to another program':'Available Programs';
+  if(bl){
+    const others=list.filter(p=>!mine||p.id!==mine.id);
+    if(!others.length){
+      bl.innerHTML=`<div class="card wkt-empty">${list.length?'You are already on the only available program.':'No programs available yet — check back once your coach adds one.'}</div>`;
+    } else {
+      bl.innerHTML=others.map(p=>`
+        <div class="prog-card">
+          <div class="prog-card-nm">${escHtml(p.name)}</div>
+          ${p.description?`<div class="prog-card-desc">${escHtml(p.description)}</div>`:''}
+          <div style="font-size:11px;color:var(--gry2);margin-bottom:10px">${(p.days||[]).length} day${(p.days||[]).length===1?'':'s'} · ${(p.days||[]).reduce((s,d)=>s+(d.exercises||[]).length,0)} exercises</div>
+          <button class="b-secondary" style="width:auto;padding:9px 16px" onclick="assignProgramToUser('${u.email}','${p.id}')">Use this program</button>
+        </div>`).join('');
+    }
+  }
+}
+
+// ── Admin: program builder ──
+let progBuilder={id:null,name:'',description:'',days:[],_open:false};
+function newProgDay(){return{id:'d'+Date.now()+Math.floor(Math.random()*1000),name:'',exercises:[]}}
+function newProgExercise(){return{name:'',targetSets:3,targetReps:'8-12'}}
+
+function pbUpdateName(v){progBuilder.name=v;}
+function pbUpdateDesc(v){progBuilder.description=v;}
+function pbAddDay(){progBuilder.days.push(newProgDay());renderAdmin();}
+function pbRemoveDay(di){progBuilder.days.splice(di,1);renderAdmin();}
+function pbUpdateDayName(di,v){if(progBuilder.days[di])progBuilder.days[di].name=v;}
+function pbAddExercise(di){const d=progBuilder.days[di];if(!d)return;d.exercises.push(newProgExercise());renderAdmin();}
+function pbRemoveExercise(di,ei){const d=progBuilder.days[di];if(!d)return;d.exercises.splice(ei,1);renderAdmin();}
+function pbUpdateExercise(di,ei,field,v){const d=progBuilder.days[di];if(!d||!d.exercises[ei])return;d.exercises[ei][field]=field==='targetSets'?(parseInt(v)||0):v;}
+
+async function saveProgram(){
+  const name=(progBuilder.name||'').trim();
+  if(!name){toast('Please name the program','r');return;}
+  const days=(progBuilder.days||[]).map(d=>({id:d.id,name:(d.name||'').trim()||'Day',exercises:(d.exercises||[]).map(ex=>({name:(ex.name||'').trim(),targetSets:parseInt(ex.targetSets)||0,targetReps:(ex.targetReps||'').trim()})).filter(ex=>ex.name)})).filter(d=>d.exercises.length);
+  const data={name,description:(progBuilder.description||'').trim(),days};
+  try{
+    if(progBuilder.id){
+      await fdb.collection('programs').doc(progBuilder.id).set(data);
+      CACHE.programs[progBuilder.id]=Object.assign({id:progBuilder.id},data);
+      toast('📋 Program updated','g');
+    } else {
+      const id='p'+Date.now();
+      await fdb.collection('programs').doc(id).set(data);
+      CACHE.programs[id]=Object.assign({id},data);
+      toast('📋 Program created','g');
+    }
+    closeProgramBuilder();
+  }catch(e){console.error(e);toast('⚠️ Could not save — check connection','r');}
+}
+
+async function deleteProgram(id){
+  if(!confirm('Delete this program? Members currently assigned to it will need a new one.'))return;
+  try{
+    await fdb.collection('programs').doc(id).delete();
+    delete CACHE.programs[id];
+    // Unassign anyone still on it
+    Object.values(gDB().users).filter(u=>u.programId===id).forEach(u=>{
+      fdb.collection('users').doc(u.email).update({programId:null}).catch(()=>{});
+      if(CACHE.users[u.email])CACHE.users[u.email].programId=null;
+    });
+    toast('Program deleted','r');
+    renderAdmin();
+  }catch(e){console.error(e);toast('⚠️ Could not delete — check connection','r');}
+}
+
+function renderProgramBuilder(){
+  const editing=!!progBuilder.id;
+  return `<div class="prog-admin-card" id="progBuilderWrap">
+    <div class="card-lbl">${editing?'Edit Program':'New Program'}</div>
+    <input class="prog-name-in" placeholder="Program name (e.g. Push/Pull/Legs)" value="${escAttr(progBuilder.name)}" oninput="pbUpdateName(this.value)">
+    <textarea class="prog-desc-in" rows="2" placeholder="Short description (optional)" oninput="pbUpdateDesc(this.value)">${escHtml(progBuilder.description)}</textarea>
+    ${progBuilder.days.map((d,di)=>`
+      <div class="prog-day-card">
+        <div class="prog-day-hdr">
+          <input class="day-name-in" placeholder="Day name (e.g. Day 1 — Push)" value="${escAttr(d.name)}" oninput="pbUpdateDayName(${di},this.value)">
+          <button class="ex-del" onclick="pbRemoveDay(${di})" title="Remove day">✕</button>
+        </div>
+        ${d.exercises.map((ex,ei)=>`
+          <div class="prog-ex-row">
+            <input class="prog-ex-in" placeholder="Exercise name" value="${escAttr(ex.name)}" oninput="pbUpdateExercise(${di},${ei},'name',this.value)">
+            <input class="prog-ex-in" type="number" placeholder="Sets" value="${ex.targetSets||''}" oninput="pbUpdateExercise(${di},${ei},'targetSets',this.value)">
+            <input class="prog-ex-in" placeholder="Reps" value="${escAttr(ex.targetReps)}" oninput="pbUpdateExercise(${di},${ei},'targetReps',this.value)">
+            <button class="set-del" onclick="pbRemoveExercise(${di},${ei})" title="Remove exercise">✕</button>
+          </div>`).join('')}
+        <button class="add-prog-ex-btn" onclick="pbAddExercise(${di})">＋ Add Exercise</button>
+      </div>`).join('')}
+    <button class="add-prog-day-btn" onclick="pbAddDay()">＋ Add Day</button>
+    <div style="display:flex;gap:8px">
+      <button class="save-btn" style="margin-top:0" onclick="saveProgram()">💾 ${editing?'Update':'Create'} Program</button>
+      <button class="b-secondary" style="width:auto;padding:0 16px" onclick="closeProgramBuilder()">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function renderProgramsAdminSection(){
+  const list=allPrograms();
+  let html=`<div style="font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--gry);margin:20px 0 10px">Workout Programs</div>`;
+  html+= (progBuilder._open?renderProgramBuilder():`<button class="add-prog-day-btn" style="margin-bottom:14px" onclick="openProgramBuilderNew()">＋ New Program</button>`);
+  if(!list.length && !progBuilder._open){
+    html+=`<div style="font-size:12px;color:var(--gry);padding:6px 0 14px">No programs yet — create one above.</div>`;
+  } else {
+    html+=list.map(p=>{
+      const assignedCount=Object.values(gDB().users).filter(u=>u.programId===p.id).length;
+      return `<div class="prog-admin-card">
+        <div class="prog-admin-top">
+          <div>
+            <div class="prog-admin-nm">${escHtml(p.name)}</div>
+            ${p.description?`<div class="prog-admin-desc">${escHtml(p.description)}</div>`:''}
+            <div class="prog-admin-meta">${(p.days||[]).length} day${(p.days||[]).length===1?'':'s'} · ${assignedCount} member${assignedCount===1?'':'s'} assigned</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="wkt-icn-btn" onclick='openProgramBuilderEdit("${p.id}")' title="Edit">✏️</button>
+            <button class="wkt-icn-btn" onclick="deleteProgram('${p.id}')" title="Delete">🗑️</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  return html;
+}
+
+function openProgramBuilderNew(){progBuilder={id:null,name:'',description:'',days:[newProgDay()],_open:true};renderAdmin();scrollToProgBuilder();}
+function openProgramBuilderEdit(id){const p=gDB().programs[id];if(!p)return;progBuilder=Object.assign({},JSON.parse(JSON.stringify(p)),{_open:true});renderAdmin();scrollToProgBuilder();}
+function closeProgramBuilder(){progBuilder={id:null,name:'',description:'',days:[],_open:false};renderAdmin();}
+function scrollToProgBuilder(){setTimeout(()=>{const el=document.getElementById('progBuilderWrap');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},50);}
 
 // ═══════════════════════════════════════
 // SPEEDOMETER
@@ -1651,7 +1915,7 @@ function renderAdmin(){
     <div class="cm"><div class="cmv">${avgWt}</div><div class="cml">Avg Wt kg</div></div>`;
 
   if(!allMembers.length){
-    ml.innerHTML='<div style="text-align:center;padding:24px;font-size:13px;color:var(--gry)">No members registered yet</div>';
+    ml.innerHTML=renderProgramsAdminSection()+'<div style="text-align:center;padding:24px;font-size:13px;color:var(--gry)">No members registered yet</div>';
     return;
   }
 
@@ -1665,6 +1929,7 @@ function renderAdmin(){
       const isPend=u.status==='pending';
       const wDiff=last&&u.baseWeight!=null?(last.weight-u.baseWeight).toFixed(1):null;
       const waDiff=last&&u.baseWaist!=null?(last.waist-u.baseWaist).toFixed(1):null;
+      const progOptions=allPrograms().map(p=>`<option value="${p.id}" ${u.programId===p.id?'selected':''}>${escHtml(p.name)}</option>`).join('');
       return `<div class="mc">
         <div class="mc-top">
           <div class="mc-av" style="background:${col}">${u.name.charAt(0).toUpperCase()}</div>
@@ -1676,6 +1941,13 @@ function renderAdmin(){
           </div>
           <span class="bdg ${isPend?'bdg-pend':ci.length?'bdg-on':'bdg-off'}">${isPend?'Pending':ci.length?'Active':'Approved'}</span>
         </div>
+        ${!isPend?`<div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--gry);font-weight:600">📋 Program:</span>
+          <select class="prog-select-sm" onchange="assignProgramToUser('${u.email}',this.value||null)">
+            <option value="">— None —</option>
+            ${progOptions}
+          </select>
+        </div>`:''}
         <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
           ${isPend?`<button class="approve-btn" onclick="approveUser('${u.email}')">✅ Approve</button>`:''}
           ${!isPend?`<button class="approve-btn" onclick="viewMember('${u.email}')">📊 View Dashboard</button>`:''}
@@ -1701,6 +1973,8 @@ function renderAdmin(){
   }
 
   let html='';
+
+  html+=renderProgramsAdminSection();
 
   if(pending.length){
     html+=`<div style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--amb);margin:12px 0 8px;padding:8px 12px;background:rgba(255,184,0,.08);border-left:3px solid var(--amb);border-radius:4px">⏳ Pending Approval (${pending.length})</div>`;
