@@ -1362,6 +1362,7 @@ function escAttr(v){return (v==null?'':String(v)).replace(/&/g,'&amp;').replace(
 function addExercise(){wktBuilder.exercises.push(newExercise());renderExerciseBuilder();}
 function removeExercise(ei){wktBuilder.exercises.splice(ei,1);renderExerciseBuilder();}
 function updateExName(ei,v){if(wktBuilder.exercises[ei])wktBuilder.exercises[ei].name=v;}
+function updateSet(ei,si,field,v){const ex=wktBuilder.exercises[ei];if(!ex||!ex.sets[si])return;ex.sets[si][field]=v;}
 function addSet(ei){const ex=wktBuilder.exercises[ei];if(!ex)return;const last=ex.sets[ex.sets.length-1];ex.sets.push({reps:last?last.reps:'',weight:last?last.weight:''});renderExerciseBuilder();}
 function removeSet(ei,si){const ex=wktBuilder.exercises[ei];if(!ex)return;ex.sets.splice(si,1);if(!ex.sets.length)ex.sets.push({reps:'',weight:''});renderExerciseBuilder();}
 
