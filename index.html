@@ -524,9 +524,9 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
   </div>
 
   <div class="tbar" id="tabBar">
-    <button class="tb active" onclick="goTab('dashboard',this)"><span class="tb-i">📊</span><span class="tb-l">Dashboard</span></button>
+    <button class="tb active" id="tbDashboard" onclick="goTab('dashboard',this)"><span class="tb-i">📊</span><span class="tb-l">Dashboard</span></button>
     <button class="tb" onclick="goTab('checkin',this)"><span class="tb-i">✏️</span><span class="tb-l">Check-in</span></button>
-    <button class="tb" onclick="goTab('history',this)"><span class="tb-i">📅</span><span class="tb-l">History</span></button>
+    <button class="tb" id="tbHistory" onclick="goTab('history',this)"><span class="tb-i">📅</span><span class="tb-l">History</span></button>
     <button class="tb" id="tbWorkouts" onclick="goTab('workouts',this)"><span class="tb-i">🏋️</span><span class="tb-l">Workouts</span></button>
     <button class="tb" id="tbProgram" onclick="goTab('program',this)"><span class="tb-i">📋</span><span class="tb-l">Program</span></button>
     <button class="tb" id="adminTab" style="display:none" onclick="goTab('admin',this)"><span class="tb-i">🔧</span><span class="tb-l">Admin</span></button>
@@ -725,6 +725,7 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
   <div class="scr" id="scr-workouts">
     <div class="scr-ttl">WORKOUTS</div>
     <div class="scr-sub">Log exercises with sets, reps & weight</div>
+    <div id="viewAsBannerWorkouts" style="display:none;background:var(--grn-dim);border:1px solid rgba(126,224,0,.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700;color:var(--grn)"></div>
 
     <div class="wkt-stats-row" id="wktStatsRow"></div>
 
@@ -973,6 +974,7 @@ async function changeMyPassword(){
 
 function doLogout(){
   CU=null;
+  VIEWUSER=null;
   document.getElementById('page-app').classList.remove('active');
   document.getElementById('page-landing').classList.add('active');
   document.getElementById('adminTab').style.display='none';
@@ -987,7 +989,7 @@ function goTab(name,btn){
     toast('⏳ This unlocks once the coach approves your account.','a');
     return;
   }
-  if(btn)VIEWUSER=null; // clear coach "view as" when navigating via the bottom nav
+  if(btn && name==='admin')VIEWUSER=null; // exit coach "view as" only when returning to Admin via the bottom nav
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.tb').forEach(t=>t.classList.remove('active'));
   document.getElementById('scr-'+name).classList.add('active');
@@ -1021,12 +1023,17 @@ function goToWorkoutsFromCI(){
   }
 }
 
-function viewMember(email){
+function viewMember(email){viewMemberAs(email,'dashboard');}
+
+const TAB_BTN_IDS={dashboard:'tbDashboard',checkin:null,history:'tbHistory',workouts:'tbWorkouts',program:'tbProgram'};
+function viewMemberAs(email,tab){
   if(!CU||CU.role!=='admin')return;
   const u=gDB().users[email];
   if(!u)return;
   VIEWUSER=u;
-  goTab('dashboard',null);
+  goTab(tab,null);
+  const btnId=TAB_BTN_IDS[tab];
+  if(btnId)activateTabButton(btnId);
 }
 
 function exitViewAs(){
@@ -1398,6 +1405,11 @@ async function deleteWorkout(id){
 
 function renderWorkoutsScreen(){
   if(!CU)return;
+  const vb=document.getElementById('viewAsBannerWorkouts');
+  if(vb){
+    if(VIEWUSER){vb.style.display='block';vb.textContent='👁️ Coach view — logging/viewing '+VIEWUSER.name+"'s workouts ("+VIEWUSER.email+')';}
+    else vb.style.display='none';
+  }
   const list=[...myWorkouts()].sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
 
   // Stats row
@@ -1929,7 +1941,9 @@ function renderAdmin(){
         </div>`:''}
         <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
           ${isPend?`<button class="approve-btn" onclick="approveUser('${u.email}')">✅ Approve</button>`:''}
-          ${!isPend?`<button class="approve-btn" onclick="viewMember('${u.email}')">📊 View Dashboard</button>`:''}
+          ${!isPend?`<button class="approve-btn" onclick="viewMember('${u.email}')">📊 Dashboard</button>`:''}
+          ${!isPend?`<button class="approve-btn" onclick="viewMemberAs('${u.email}','workouts')">🏋️ Workouts</button>`:''}
+          ${!isPend?`<button class="approve-btn" onclick="viewMemberAs('${u.email}','program')">📋 Program</button>`:''}
           ${!isPend&&ci.length?`<button class="approve-btn" style="background:#1a2a1a;color:var(--grn);border:1px solid var(--grn)" onclick="exportUserPDF('${u.email}')">📄 PDF Report</button>`:''}
           ${!isPend&&ci.length?`<button class="approve-btn" style="background:var(--dark2);color:var(--txt);border:1px solid var(--bdr2)" onclick="exportUserCSV('${u.email}')">⬇️ CSV</button>`:''}
           ${!isPend?`<button class="approve-btn" style="background:var(--dark2);color:var(--txt);border:1px solid var(--bdr2)" onclick="resetPassword('${u.email}')">🔑 Reset PW</button>`:''}
