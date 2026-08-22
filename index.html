@@ -822,7 +822,7 @@ function mapAuthError(e){
   return codes[e.code] || 'Authentication failed. Please try again.';
 }
 
-// Firebase Auth state listener
+// Firebase Auth state listener + data sync
 firebase.auth().onAuthStateChanged(async (user) => {
   if(user){
     try{
@@ -879,7 +879,7 @@ fdb.collection('users').onSnapshot(snap=>{
   CACHE.users=users;
   fbReady=true;
   onDataUpdate();
-},err=>{ console.error(err); toast('⚠️ Could not connect to database — check Firebase setup','a'); });
+},err=>{ console.error(err); });
 
 fdb.collection('checkins').onSnapshot(snap=>{
   const checkins={};
