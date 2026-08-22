@@ -2038,7 +2038,7 @@ const approveUser = requireAdmin(async function approveUser(email){
     toast('✅ '+email+' approved','g');
     renderAdmin();
   }catch(e){console.error(e);toast('⚠️ Could not approve — check connection','r');}
-}
+});
 
 const rejectUser = requireAdmin(async function rejectUser(email){
   if(!confirm('Remove '+email+' from the community?'))return;
