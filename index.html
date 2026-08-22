@@ -1500,7 +1500,7 @@ function escHtml(v){return (v==null?'':String(v)).replace(/&/g,'&amp;').replace(
 function allPrograms(){return Object.values(gDB().programs||{}).sort((a,b)=>(a.name||'').localeCompare(b.name||''))}
 function myAssignedProgram(){const u=VIEWUSER||CU;if(!u||!u.programId)return null;return gDB().programs[u.programId]||null}
 
-async async function assignProgramToUser(email,programId){
+async function assignProgramToUser(email,programId){
   try{
     await fdb.collection('users').doc(email).set({programId:programId||null},{merge:true});
     if(CACHE.users[email])CACHE.users[email].programId=programId||null;
