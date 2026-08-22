@@ -774,8 +774,6 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
 // CONFIG & CONSTANTS
 // ═══════════════════════════════════════
 const DB_KEY = 'sl_v3';
-const ADMIN_EMAIL = 'admin@shredlane.com';
-const ADMIN_PASS  = 'shredlane2026';
 const COLORS = ['#7EE000','#3B82F6','#F59E0B','#EF4444','#8B5CF6','#EC4899','#14B8A6','#F97316'];
 const HU_LBL = {1:'Full',2:'Satisfied',3:'Slightly hungry',4:'Peckish',5:'Moderate',6:'Getting hungry',7:'Quite hungry',8:'Very hungry',9:'Extremely hungry',10:'Starving'};
 
@@ -1502,9 +1500,9 @@ function escHtml(v){return (v==null?'':String(v)).replace(/&/g,'&amp;').replace(
 function allPrograms(){return Object.values(gDB().programs||{}).sort((a,b)=>(a.name||'').localeCompare(b.name||''))}
 function myAssignedProgram(){const u=VIEWUSER||CU;if(!u||!u.programId)return null;return gDB().programs[u.programId]||null}
 
-async function assignProgramToUser(email,programId){
+async async function assignProgramToUser(email,programId){
   try{
-    await fdb.collection('users').doc(email).update({programId:programId||null});
+    await fdb.collection('users').doc(email).set({programId:programId||null},{merge:true});
     if(CACHE.users[email])CACHE.users[email].programId=programId||null;
     toast(programId?'📋 Program assigned':'Program unassigned','g');
     renderProgramScreen();
