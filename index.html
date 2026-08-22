@@ -437,7 +437,7 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
     <div class="sec-ttl">BUILT FOR<br>RESULTS</div>
     <div class="feat-grid">
       <div class="feat"><div class="feat-i">📊</div><div class="feat-t">Daily Check-ins</div><div class="feat-d">Weight, waist, sleep, steps & hunger every day.</div></div>
-      <div class="feat"><div class="feat-i">📈</div><div class="feat-t">12-Week Trends</div><div class="feat-d">Weekly averages and progress vs your baseline.</div></div>
+      <div class="feat"><div class="feat-i">📈</div><div class="feat-t">16-Week Trends</div><div class="feat-d">Weekly averages and progress vs your baseline.</div></div>
       <div class="feat"><div class="feat-i">⚡</div><div class="feat-t">Live Dashboard</div><div class="feat-d">Streak tracking and step speedometer.</div></div>
       <div class="feat"><div class="feat-i">🏋️</div><div class="feat-t">Training Guidance</div><div class="feat-d">Progressive overload support for your stats.</div></div>
       <div class="feat"><div class="feat-i">🧠</div><div class="feat-t">Fat-Loss Science</div><div class="feat-d">Real strategies. No detoxes. Just results.</div></div>
@@ -807,29 +807,35 @@ let checkinsReady = false;
 let workoutsReady = false;
 let programsReady = false;
 
-// Firebase Auth state listener
-firebase.auth().onAuthStateChanged(async (user) => {
-  if(user){
-    const snap = await fdb.collection('users').doc(user.email).get();
-    if(snap.exists){
-      const profile = snap.data();
-      if(profile.status === 'approved'){
-        CU = profile;
-        onSuccess(profile);
+// Firebase Auth state listener — waits for auth to init
+document.addEventListener('DOMContentLoaded', function(){
+  if(typeof firebase !== 'undefined' && firebase.auth){
+    firebase.auth().onAuthStateChanged(async function(user){
+      if(user){
+        try{
+          const snap = await fdb.collection('users').doc(user.email).get();
+          if(snap.exists){
+            const profile = snap.data();
+            if(profile.status === 'approved'){
+              CU = profile;
+              onSuccess(profile);
+            } else {
+              await firebase.auth().signOut();
+              toast('Your account is pending admin approval.','a');
+            }
+          } else {
+            await firebase.auth().signOut();
+            toast('Account no longer active.','r');
+          }
+        }catch(e){ console.error('Auth state error:',e); }
       } else {
-        await firebase.auth().signOut();
-        toast('Your account is pending admin approval.','a');
+        CU = null;
+        VIEWUSER = null;
+        document.getElementById('page-app').classList.remove('active');
+        document.getElementById('page-landing').classList.add('active');
+        document.getElementById('adminTab').style.display = 'none';
       }
-    } else {
-      await firebase.auth().signOut();
-      toast('Account no longer active.','r');
-    }
-  } else {
-    CU = null;
-    VIEWUSER = null;
-    document.getElementById('page-app').classList.remove('active');
-    document.getElementById('page-landing').classList.add('active');
-    document.getElementById('adminTab').style.display = 'none';
+    });
   }
 });
 
@@ -2056,9 +2062,10 @@ const rejectUser = requireAdmin(async function rejectUser(email){
     toast('Removed '+email,'r');
     renderAdmin();
   }catch(e){console.error(e);toast('⚠️ Could not remove — check connection','r');}
-}
+});
 
-async const resetPassword = requireAdmin(async function resetPassword(email){
+async function resetPassword(email){
+  if(!CU||CU.role!=='admin')return;
   try{
     await firebase.auth().sendPasswordResetEmail(email);
     toast('📧 Password reset email sent to '+email,'g');
@@ -2066,7 +2073,7 @@ async const resetPassword = requireAdmin(async function resetPassword(email){
     console.error(e);
     toast('⚠️ Could not send reset email — check connection','r');
   }
-});
+}
 
 // ═══════════════════════════════════════
 // EXPORTS — CSV (admin) & PDF (member)
@@ -2106,7 +2113,7 @@ const exportAllCSV = requireAdmin(function exportAllCSV(){
   const csv=rows.map(r=>r.map(csvEscape).join(',')).join('\n');
   downloadBlob(csv,'shredlane-data-'+today()+'.csv','text/csv');
   toast('⬇️ CSV downloaded','g');
-}
+});
 
 function exportMyCSV(){
   if(!CU)return;
