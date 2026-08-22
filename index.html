@@ -797,7 +797,6 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const fdb = firebase.firestore();
-fbReady = true;
 
 // In-memory mirror of the cloud DB, kept live via onSnapshot listeners.
 // gDB() is used throughout the app exactly like before — it now just
