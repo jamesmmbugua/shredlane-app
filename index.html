@@ -14,6 +14,7 @@
 <!-- Firebase (shared cloud database so admin & members see the same data on any device) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -796,6 +797,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const fdb = firebase.firestore();
+fbReady = true;
 
 // In-memory mirror of the cloud DB, kept live via onSnapshot listeners.
 // gDB() is used throughout the app exactly like before — it now just
@@ -805,6 +807,32 @@ let fbReady = false;
 let checkinsReady = false;
 let workoutsReady = false;
 let programsReady = false;
+
+// Firebase Auth state listener
+firebase.auth().onAuthStateChanged(async (user) => {
+  if(user){
+    const snap = await fdb.collection('users').doc(user.email).get();
+    if(snap.exists){
+      const profile = snap.data();
+      if(profile.status === 'approved'){
+        CU = profile;
+        onSuccess(profile);
+      } else {
+        await firebase.auth().signOut();
+        toast('Your account is pending admin approval.','a');
+      }
+    } else {
+      await firebase.auth().signOut();
+      toast('Account no longer active.','r');
+    }
+  } else {
+    CU = null;
+    VIEWUSER = null;
+    document.getElementById('page-app').classList.remove('active');
+    document.getElementById('page-landing').classList.add('active');
+    document.getElementById('adminTab').style.display = 'none';
+  }
+});
 
 function gDB(){return CACHE}
 function today(){return new Date().toISOString().slice(0,10)}
@@ -882,6 +910,24 @@ fdb.collection('programs').onSnapshot(snap=>{
 // ═══════════════════════════════════════
 let CU=null, trendMetric='weight';
 
+function requireAdmin(fn){
+  return function(...args){
+    if(!CU || CU.role!=='admin'){toast('Admin access required.','r');return;}
+    return fn.apply(this,args);
+  };
+}
+function mapAuthError(e){
+  const codes={
+    'auth/user-not-found':'No account found with this email.',
+    'auth/wrong-password':'Incorrect password.',
+    'auth/invalid-email':'Invalid email address.',
+    'auth/too-many-requests':'Too many attempts. Try again later.',
+    'auth/email-already-in-use':'An account with this email already exists.',
+    'auth/weak-password':'Password must be at least 6 characters.'
+  };
+  return codes[e.code] || 'Authentication failed. Please try again.';
+}
+
 // ═══════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════
@@ -896,17 +942,18 @@ function switchAuth(tab){
   document.getElementById('authSub').textContent=tab==='login'?'Sign in to your account':'Create your accountability account';
 }
 
-function doLogin(){
+async function doLogin(){
   const em=(document.getElementById('lEm').value||'').trim().toLowerCase();
   const pw=(document.getElementById('lPw').value||'');
   const err=document.getElementById('lErr');
   err.textContent='';
-  if(!fbReady){err.textContent='Still connecting… please wait a moment and try again.';return;}
   if(!em||!pw){err.textContent='Please enter email and password.';return;}
-  const d=gDB(), u=d.users[em];
-  if(!u){err.textContent='No account found with this email.';return;}
-  if(u.password!==pw){err.textContent='Incorrect password.';return;}
-  onSuccess(u);
+  try{
+    await firebase.auth().signInWithEmailAndPassword(em,pw);
+  }catch(e){
+    console.error(e);
+    err.textContent=mapAuthError(e);
+  }
 }
 
 async function doRegister(){
@@ -919,7 +966,6 @@ async function doRegister(){
   const wa=parseFloat(document.getElementById('rWa').value);
   const err=document.getElementById('rErr');
   err.textContent='';
-  if(!fbReady){err.textContent='Still connecting… please wait a moment and try again.';return;}
   if(!nm){err.textContent='Please enter your full name.';return;}
   if(!em||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){err.textContent='Please enter a valid email address.';return;}
   if(!pw||pw.length<6){err.textContent='Password must be at least 6 characters.';return;}
@@ -929,15 +975,22 @@ async function doRegister(){
   if(!wa||isNaN(wa)||wa<20||wa>80){err.textContent='Please enter a valid waist measurement (inches).';return;}
   const d=gDB();
   if(d.users[em]){err.textContent='An account with this email already exists.';return;}
-  const user={name:nm,email:em,password:pw,goal:gl,baseWeight:wt,baseWaist:wa,role:'member',status:'pending',joined:today()};
   const btn=document.querySelector('#af-register .save-btn, #af-register button[onclick="doRegister()"]');
+  const orig=btn?btn.textContent:'';
+  if(btn){btn.textContent='Creating account…';btn.disabled=true;}
   try{
+    await firebase.auth().createUserWithEmailAndPassword(em,pw);
+    const user={name:nm,email:em,goal:gl,baseWeight:wt,baseWaist:wa,role:'member',status:'pending',joined:today()};
     await fdb.collection('users').doc(em).set(user);
-    CACHE.users[em]=user; // optimistic local update
-    onSuccess(user);
+    CACHE.users[em]=user;
+    await firebase.auth().signOut();
+    closeAuth();
+    toast('Account created! Please wait for admin approval.','g');
   }catch(e){
     console.error(e);
-    err.textContent='Could not create account — please check your connection and try again.';
+    err.textContent=mapAuthError(e);
+  }finally{
+    if(btn){btn.textContent=orig;btn.disabled=false;}
   }
 }
 
@@ -958,27 +1011,24 @@ function onSuccess(user){
 
 async function changeMyPassword(){
   if(!CU)return;
-  const cur=prompt('Enter your current password:');
-  if(cur===null)return;
-  if(cur!==CU.password){toast('Current password is incorrect','r');return;}
   const np=prompt('Enter your new password (min 6 characters):');
   if(np===null)return;
   if(np.length<6){toast('Password must be at least 6 characters','r');return;}
   try{
-    await fdb.collection('users').doc(CU.email).update({password:np});
-    CU.password=np;
-    if(CACHE.users[CU.email])CACHE.users[CU.email].password=np;
+    await firebase.auth().currentUser.updatePassword(np);
     toast('🔑 Password updated','g');
-  }catch(e){console.error(e);toast('⚠️ Could not update — check connection','r');}
+  }catch(e){
+    console.error(e);
+    if(e.code==='auth/requires-recent-login'){
+      toast('⚠️ Please log out and log back in before changing your password.','r');
+    }else{
+      toast('⚠️ Could not update — check connection','r');
+    }
+  }
 }
 
-function doLogout(){
-  CU=null;
-  VIEWUSER=null;
-  document.getElementById('page-app').classList.remove('active');
-  document.getElementById('page-landing').classList.add('active');
-  document.getElementById('adminTab').style.display='none';
-  toast('Logged out');
+async function doLogout(){
+  await firebase.auth().signOut();
 }
 
 // ═══════════════════════════════════════
@@ -1754,7 +1804,7 @@ function renderDash(){
   const vb=document.getElementById('viewAsBanner');
   if(VIEWUSER){
     vb.style.display='flex';
-    document.getElementById('viewAsTxt').textContent='👁️ Coach view — '+u.name+"'s dashboard ("+u.email+')';
+    document.getElementById('viewAsTxt').textContent='👁️ Coach view — '+escHtml(u.name)+"'s dashboard ("+escHtml(u.email)+')';
   } else {
     vb.style.display='none';
   }
@@ -1886,7 +1936,7 @@ function renderHistory(){
 // ═══════════════════════════════════════
 // ADMIN
 // ═══════════════════════════════════════
-function renderAdmin(){
+const renderAdmin = requireAdmin(function renderAdmin(){
   if(!CU||CU.role!=='admin')return;
   const d=gDB();
   const allMembers=Object.values(d.users).filter(u=>u.role!=='admin');
@@ -1923,12 +1973,12 @@ function renderAdmin(){
       const progOptions=allPrograms().map(p=>`<option value="${p.id}" ${u.programId===p.id?'selected':''}>${escHtml(p.name)}</option>`).join('');
       return `<div class="mc">
         <div class="mc-top">
-          <div class="mc-av" style="background:${col}">${u.name.charAt(0).toUpperCase()}</div>
+          <div class="mc-av" style="background:${col}">${escHtml(u.name).charAt(0).toUpperCase()}</div>
           <div style="flex:1">
-            <div class="mc-nm">${u.name}</div>
-            <div class="mc-em">${u.email} · ${u.goal||'—'}</div>
+            <div class="mc-nm">${escHtml(u.name)}</div>
+            <div class="mc-em">${escHtml(u.email)} · ${escHtml(u.goal)||'—'}</div>
             ${u.baseWeight!=null?`<div class="mc-em" style="color:var(--grn3)">Baseline: ${u.baseWeight}kg · ${u.baseWaist}in</div>`:''}
-            <div class="mc-em" style="color:var(--gry)">Joined ${u.joined||'—'}</div>
+            <div class="mc-em" style="color:var(--gry)">Joined ${escHtml(u.joined)||'—'}</div>
           </div>
           <span class="bdg ${isPend?'bdg-pend':ci.length?'bdg-on':'bdg-off'}">${isPend?'Pending':ci.length?'Active':'Approved'}</span>
         </div>
@@ -1955,13 +2005,13 @@ function renderAdmin(){
           <div class="mcs"><div class="mcsv">${ci.filter(c=>(c.steps||0)>=10000).length}</div><div class="mcsl">10K Days</div></div>
         </div>`:''}
         ${last&&!isPend?`<div class="mc-last">
-          Last: ${last.date} · Wt: <strong style="color:${wDiff&&parseFloat(wDiff)<0?'var(--grn)':'var(--red)'}">${last.weight}kg${wDiff!==null?' ('+(parseFloat(wDiff)>0?'+':'')+wDiff+'kg)':''}</strong> · Waist: <strong style="color:${waDiff&&parseFloat(waDiff)<0?'var(--grn)':'var(--red)'}">${last.waist}in${waDiff!==null?' ('+(parseFloat(waDiff)>0?'+':'')+waDiff+'in)':''}</strong> · Steps: ${(last.steps||0).toLocaleString()} · Sleep: ${last.sleep}h · Hunger: ${last.hunger}/10
-          ${last.notes?`<br><em style="color:var(--gry2);font-style:italic">"${last.notes}"</em>`:''}
+          Last: ${escHtml(last.date)} · Wt: <strong style="color:${wDiff&&parseFloat(wDiff)<0?'var(--grn)':'var(--red)'}">${last.weight}kg${wDiff!==null?' ('+(parseFloat(wDiff)>0?'+':'')+wDiff+'kg)':''}</strong> · Waist: <strong style="color:${waDiff&&parseFloat(waDiff)<0?'var(--grn)':'var(--red)'}">${last.waist}in${waDiff!==null?' ('+(parseFloat(waDiff)>0?'+':'')+waDiff+'in)':''}</strong> · Steps: ${(last.steps||0).toLocaleString()} · Sleep: ${escHtml(last.sleep)}h · Hunger: ${escHtml(last.hunger)}/10
+          ${last.notes?`<br><em style="color:var(--gry2);font-style:italic">"${escHtml(last.notes)}"</em>`:''}
         </div>`:''}
       </div>`;
     }catch(err){
       console.error('Card error for',u.email,err);
-      return `<div class="mc" style="border:1px solid var(--red);padding:12px"><div class="mc-nm">${u.name}</div><div class="mc-em" style="color:var(--red)">${u.email} — data error</div></div>`;
+      return `<div class="mc" style="border:1px solid var(--red);padding:12px"><div class="mc-nm">${escHtml(u.name)}</div><div class="mc-em" style="color:var(--red)">${escHtml(u.email)} — data error</div></div>`;
     }
   }
 
@@ -1984,9 +2034,9 @@ function renderAdmin(){
   }
 
   ml.innerHTML=html;
-}
+});
 
-async function approveUser(email){
+const approveUser = requireAdmin(async function approveUser(email){
   try{
     await fdb.collection('users').doc(email).update({status:'approved'});
     if(CACHE.users[email])CACHE.users[email].status='approved';
@@ -1995,7 +2045,7 @@ async function approveUser(email){
   }catch(e){console.error(e);toast('⚠️ Could not approve — check connection','r');}
 }
 
-async function rejectUser(email){
+const rejectUser = requireAdmin(async function rejectUser(email){
   if(!confirm('Remove '+email+' from the community?'))return;
   try{
     await fdb.collection('users').doc(email).delete();
@@ -2009,16 +2059,15 @@ async function rejectUser(email){
   }catch(e){console.error(e);toast('⚠️ Could not remove — check connection','r');}
 }
 
-async function resetPassword(email){
-  const np=prompt('Enter a new password for '+email+' (min 6 characters):');
-  if(np===null)return;
-  if(np.length<6){toast('Password must be at least 6 characters','r');return;}
+async const resetPassword = requireAdmin(async function resetPassword(email){
   try{
-    await fdb.collection('users').doc(email).update({password:np});
-    if(CACHE.users[email])CACHE.users[email].password=np;
-    toast('🔑 Password reset for '+email,'g');
-  }catch(e){console.error(e);toast('⚠️ Could not reset password — check connection','r');}
-}
+    await firebase.auth().sendPasswordResetEmail(email);
+    toast('📧 Password reset email sent to '+email,'g');
+  }catch(e){
+    console.error(e);
+    toast('⚠️ Could not send reset email — check connection','r');
+  }
+});
 
 // ═══════════════════════════════════════
 // EXPORTS — CSV (admin) & PDF (member)
@@ -2039,7 +2088,7 @@ function csvEscape(v){
   return v;
 }
 
-function exportAllCSV(){
+const exportAllCSV = requireAdmin(function exportAllCSV(){
   if(!CU||CU.role!=='admin')return;
   const d=gDB();
   const rows=[['Name','Email','Goal','Status','Joined','Date','Weight (kg)','Waist (in)','Steps','Sleep (hrs)','Sleep Quality','Hunger (1-10)','Water (glasses)','Protein %','Workout','Notes']];
