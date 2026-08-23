@@ -992,7 +992,7 @@ fdb.collection('checkins').onSnapshot(snap=>{
     // Strip null/undefined slots from manual Firebase deletions
     checkins[doc.id]=(data&&Array.isArray(data.entries))?data.entries.filter(e=>e&&e.date):[];
   });
-  CACHE.checkins=checkins;
+    CACHE.checkins=checkins;
   checkinsReady=true;
   onDataUpdate();
 },err=>console.error(err));
