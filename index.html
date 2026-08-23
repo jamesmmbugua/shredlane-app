@@ -766,7 +766,105 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
     <div class="card"><div class="card-lbl">Community Stats</div><div class="comm-grid" id="commGrid"></div></div>
     <div style="font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--gry);margin-bottom:10px">Member Approvals & Data</div>
     <div id="membersList"></div>
+    
+    <!-- Admin: Demos -->
+    <div style="font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--gry);margin:18px 0 10px;">Exercise Demos</div>
+    <div class="card">
+      <div class="card-lbl">Upload New Demo</div>
+      <div class="field" style="margin-top:10px;">
+        <label>Exercise Name</label>
+        <input type="text" id="demoName" class="fi" placeholder="e.g. Barbell Squat">
+      </div>
+      <div class="field">
+        <label>Muscle Group</label>
+        <select id="demoGroup" class="fi fi-sel">
+          <option value="">Select group…</option>
+          <option value="Legs">Legs</option>
+          <option value="Back">Back</option>
+          <option value="Chest">Chest</option>
+          <option value="Shoulders">Shoulders</option>
+          <option value="Arms">Arms</option>
+          <option value="Core">Core</option>
+          <option value="Full Body">Full Body</option>
+          <option value="Cardio">Cardio</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Video File (MP4, max 50MB)</label>
+        <input type="file" id="demoFile" accept="video/mp4,video/*" onchange="onDemoFile(this)" style="display:none;">
+        <button class="b-secondary" style="width:100%;" onclick="document.getElementById('demoFile').click()">🎬 Choose Video</button>
+        <div id="demoFileName" style="font-size:12px;color:var(--gry);margin-top:6px;"></div>
+      </div>
+      <button class="b-grn" style="width:100%;margin-top:6px;" onclick="saveDemo()">Upload Demo</button>
+    </div>
+    <div id="adminDemoList"></div>
+
+    <!-- Admin: Member Photos -->
+    <div style="font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--gry);margin:18px 0 10px;">Member Progress Photos</div>
+    <div id="adminPhotoList"></div>
   </div>
+  
+<!-- ═══════════════════════════════════════
+     PHOTOS
+     ═══════════════════════════════════════ -->
+<div class="scr" id="scr-photos">
+  <div class="scr-ttl">PROGRESS PHOTOS</div>
+  <div class="scr-sub">Front · Side · Back</div>
+
+  <!-- Date picker -->
+  <div class="date-picker-wrap">
+    <div class="dp-row">
+      <div>
+        <div class="dp-label">Photo Date</div>
+        <div class="dp-date-display" id="photoDateDisp">TODAY</div>
+      </div>
+      <button class="dp-today-btn" onclick="setPhotoDate(today())">Today</button>
+    </div>
+    <input type="date" id="photoDateIn" class="dp-native" onchange="onPhotoDateChange(this.value)">
+    <div class="dp-past-note" id="photoPastNote">You’re uploading for a past date</div>
+  </div>
+
+  <!-- Upload slots -->
+  <div class="card" id="photoUploadCard">
+    <div class="card-lbl">Upload Set</div>
+    <div class="ci-row" style="gap:10px;">
+      <div class="ci-grp" style="flex:1;">
+        <div class="ci-lbl">Front</div>
+        <input type="file" id="frontFile" accept="image/*" capture="environment" onchange="onPhotoFile('front',this)" style="display:none;">
+        <button class="b-secondary" style="width:100%;padding:12px;" onclick="document.getElementById('frontFile').click()">📷 Front</button>
+        <div id="frontPreview" style="display:none;margin-top:8px;border-radius:8px;overflow:hidden;border:1px solid var(--bdr);"></div>
+      </div>
+      <div class="ci-grp" style="flex:1;">
+        <div class="ci-lbl">Side</div>
+        <input type="file" id="sideFile" accept="image/*" capture="environment" onchange="onPhotoFile('side',this)" style="display:none;">
+        <button class="b-secondary" style="width:100%;padding:12px;" onclick="document.getElementById('sideFile').click()">📷 Side</button>
+        <div id="sidePreview" style="display:none;margin-top:8px;border-radius:8px;overflow:hidden;border:1px solid var(--bdr);"></div>
+      </div>
+      <div class="ci-grp" style="flex:1;">
+        <div class="ci-lbl">Back</div>
+        <input type="file" id="backFile" accept="image/*" capture="environment" onchange="onPhotoFile('back',this)" style="display:none;">
+        <button class="b-secondary" style="width:100%;padding:12px;" onclick="document.getElementById('backFile').click()">📷 Back</button>
+        <div id="backPreview" style="display:none;margin-top:8px;border-radius:8px;overflow:hidden;border:1px solid var(--bdr);"></div>
+      </div>
+    </div>
+    <button class="save-btn" onclick="savePhotos()" style="margin-top:14px;">Save Photo Set</button>
+  </div>
+
+  <!-- Gallery -->
+  <div class="card" id="photoGalleryCard" style="display:none;">
+    <div class="card-lbl" id="photoGalleryLabel">History</div>
+    <div id="photoGallery"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     LIBRARY  (Exercise Demos)
+     ═══════════════════════════════════════ -->
+<div class="scr" id="scr-library">
+  <div class="scr-ttl">EXERCISE LIBRARY</div>
+  <div class="scr-sub">Demo videos by muscle group</div>
+  <div id="libraryGrid"></div>
+</div>
 </div>
 
 <div id="toast"></div>
@@ -872,6 +970,8 @@ function onDataUpdate(){
   if(activeScr.id==='scr-history') renderHistory();
   if(activeScr.id==='scr-workouts') renderWorkoutsScreen();
   if(activeScr.id==='scr-program') renderProgramScreen();
+    if(activeScr.id==='scr-photos') renderPhotos();
+  if(activeScr.id==='scr-library') renderLibrary();
 }
 
 // Live listeners — every device sees the same data in (near) real time.
@@ -915,6 +1015,27 @@ fdb.collection('programs').onSnapshot(snap=>{
   });
   CACHE.programs=programs;
   programsReady=true;
+  onDataUpdate();
+},err=>console.error(err));
+
+  
+fdb.collection('photos').onSnapshot(snap=>{
+  const photos={};
+  snap.forEach(doc=>{
+    const data=doc.data();
+    photos[doc.id]=(data&&Array.isArray(data.entries))?data.entries.filter(e=>e&&e.date):[];
+  });
+  CACHE.photos=photos;
+  onDataUpdate();
+},err=>console.error(err));
+
+fdb.collection('demos').onSnapshot(snap=>{
+  const demos={};
+  snap.forEach(doc=>{
+    const data=doc.data();
+    if(data&&data.id) demos[doc.id]=data;
+  });
+  CACHE.demos=demos;
   onDataUpdate();
 },err=>console.error(err));
 
@@ -1000,6 +1121,7 @@ function onSuccess(user){
   document.getElementById('uNm').textContent=user.name.split(' ')[0];
   document.getElementById('adminTab').style.display=user.role==='admin'?'flex':'none';
   goTab('dashboard',document.querySelector('.tb'));
+    setPhotoDate(today());
   renderDash();
   toast('🔥 Welcome, '+user.name.split(' ')[0]+'!','g');
 }
@@ -1052,6 +1174,8 @@ function goTab(name,btn){
       setTimeout(()=>{ if(document.getElementById('scr-admin').classList.contains('active')) renderAdmin(); }, 1500);
     }
   }
+    if(name==='photos') renderPhotos();
+  if(name==='library') renderLibrary();
 }
 
 function activateTabButton(id){
