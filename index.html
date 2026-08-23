@@ -2703,6 +2703,7 @@ function onPhotoFile(type, input){
 function renderPhotoPreviewStatus(){
   ['front','side','back'].forEach(t=>{
     const el = document.getElementById(t+'Status');
+    if(!el) return;  // ← ADD THIS NULL CHECK
     el.textContent = photoFiles[t] ? '✓' : '●';
     el.style.color = photoFiles[t] ? 'var(--grn)' : 'var(--gry2)';
   });
