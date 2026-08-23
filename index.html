@@ -992,7 +992,7 @@ fdb.collection('checkins').onSnapshot(snap=>{
     // Strip null/undefined slots from manual Firebase deletions
     checkins[doc.id]=(data&&Array.isArray(data.entries))?data.entries.filter(e=>e&&e.date):[];
   });
-    CACHE.checkins=checkins;
+  CACHE.checkins=checkins;
   checkinsReady=true;
   onDataUpdate();
 },err=>console.error(err));
@@ -1703,7 +1703,7 @@ function renderProgramScreen(){
 
 function playDemoVideo(id){
   const demo=CACHE.demos[id];
-  if(!demo||!demo.videoUrl){toast('Demo not found','r');return;}
+  if(!demo||!(demo.videoUrl||demo.url)){toast('Demo not found','r');return;}
   let ov=document.getElementById('demoOverlay');
   if(!ov){
     ov=document.createElement('div');
@@ -1714,7 +1714,7 @@ function playDemoVideo(id){
   }
   document.getElementById('demoOverlayTitle').textContent=demo.name;
   const vid=document.getElementById('demoOverlayVideo');
-  vid.src=demo.videoUrl;
+  vid.src=demo.videoUrl||demo.url;
   vid.load();
   ov.style.display='flex';
 }
@@ -2871,10 +2871,11 @@ function renderLibrary(){
       <div class="card-lbl">${escHtml(group)}</div>
       <div style="display:grid;grid-template-columns:1fr;gap:10px;">
         ${list.map(d=>`
-          <div style="background:var(--dark2);border:1px solid var(--bdr2);border-radius:10px;padding:12px;">
+          <div style="background:var(--dark2);border:1px solid var(--bdr2);border-radius:10px;padding:12px;position:relative;">
+            ${isAdmin()?`<button onclick="event.stopPropagation();deleteDemo('${d.id}')" style="position:absolute;top:8px;right:8px;background:var(--dark3);border:1px solid var(--bdr2);border-radius:6px;color:var(--red);font-size:12px;padding:4px 8px;cursor:pointer;z-index:2;">🗑 Delete</button>`:''}
             <div style="font-size:14px;font-weight:700;color:var(--wht);margin-bottom:8px;">${escHtml(d.name)}</div>
             <video controls preload="metadata" style="width:100%;border-radius:8px;display:block;max-height:220px;background:#000;">
-              <source src="${d.url}" type="video/mp4">
+              <source src="${d.videoUrl||d.url}" type="video/mp4">
             </video>
           </div>
         `).join('')}
