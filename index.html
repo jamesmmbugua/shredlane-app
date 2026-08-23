@@ -2839,7 +2839,7 @@ async function saveDemo(){
   try {
     const url = await uploadToCloudinary(demoUploadFile, 'shredlane/demos');
     const id = 'd'+Date.now();
-    const data = {id, name, group, url, created:Date.now()};
+    const data = {id, name, group, videoUrl: url, created:Date.now()};
     await fdb.collection('demos').doc(id).set(data);
     CACHE.demos[id] = data;
 
