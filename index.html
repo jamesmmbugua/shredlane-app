@@ -762,7 +762,7 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
     <div class="scr-ttl">ADMIN</div>
     <div class="scr-sub">Coach dashboard</div>
     <div class="adm-banner">🔒 Private — coach view only</div>
-    <button class="b-secondary" style="width:auto;padding:10px 16px;margin-bottom:12px" onclick="exportAllCSV()">⬇️ Download all data (CSV)</button>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;"><button class="b-secondary" style="padding:10px 16px;" onclick="exportAllCSV()">⬇️ Download all data (CSV)</button><button class="b-secondary" style="padding:10px 16px;border-color:var(--grn);color:var(--grn);" onclick="generateDemoCheckins()">🎲 Generate Demo Check-ins</button></div>
     <div class="card"><div class="card-lbl">Community Stats</div><div class="comm-grid" id="commGrid"></div></div>
     <div style="font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--gry);margin-bottom:10px">Member Approvals & Data</div>
     <div id="membersList"></div>
@@ -951,6 +951,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
 });
 
 function gDB(){return CACHE}
+function isAdmin(){return CU && CU.role==='admin';}
 function today(){return new Date().toISOString().slice(0,10)}
   function findDemoForExercise(name){if(!name||!CACHE.demos)return null;const n=name.toLowerCase().trim();return Object.values(CACHE.demos).find(d=>d.name&&d.name.toLowerCase().trim()===n)||null;}
 
@@ -2078,7 +2079,47 @@ function renderHistory(){
 // ═══════════════════════════════════════
 // ADMIN
 // ═══════════════════════════════════════
-const renderAdmin = requireAdmin(function renderAdmin(){
+const renderAdmin = requireAdmin(// ── DEMO CHECK-IN SEEDER ──
+async function generateDemoCheckins(){
+  if(!CU || CU.role!=='admin'){toast('Admin only','r');return;}
+  const users = Object.values(gDB().users || {}).filter(u => u.role!=='admin' && u.status==='approved');
+  if(!users.length){toast('No approved members to seed','a');return;}
+  const today = new Date();
+  let seeded = 0;
+  for(const u of users){
+    const email = u.email;
+    if((gDB().checkins?.[email]?.length||0)>0) continue;
+    const baseWeight = parseFloat(u.baseWeight)||200;
+    const baseWaist  = parseFloat(u.baseWaist)||40;
+    const entries = [];
+    for(let i=13;i>=0;i--){
+      const d = new Date(today); d.setDate(d.getDate()-i);
+      const dateStr = d.toISOString().split('T')[0];
+      const progress = (14-i)/14;
+      const weight = (baseWeight - (progress*4) + ((Math.random()*1.4)-0.7)).toFixed(1);
+      const waist  = (baseWaist  - (progress*1.2) + ((Math.random()*0.4)-0.2)).toFixed(1);
+      entries.push({
+        date:dateStr, weight:parseFloat(weight), waist:parseFloat(waist),
+        steps:Math.floor(6000+Math.random()*6000),
+        sleep:parseFloat((5.5+Math.random()*3).toFixed(1)),
+        hunger:Math.floor(1+Math.random()*4),
+        protein:Math.floor(60+Math.random()*40),
+        workout:Math.random()>0.4,
+        sleepQual:Math.floor(1+Math.random()*3),
+        water:Math.floor(4+Math.random()*7),
+        notes:i===13?'Starting the journey! 💪':i===7?'Great week! 🔥':''
+      });
+    }
+    await fdb.collection('checkins').doc(email).set({entries});
+    if(!CACHE.checkins) CACHE.checkins={};
+    CACHE.checkins[email]=entries;
+    seeded++;
+  }
+  toast(seeded?`Seeded check-ins for ${seeded} member(s)`:'All members already have data','g');
+  renderDash(); renderHistory();
+}
+
+function renderAdmin(){
   if(!CU||CU.role!=='admin')return;
   const d=gDB();
   const allMembers=Object.values(d.users).filter(u=>u.role!=='admin');
