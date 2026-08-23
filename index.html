@@ -2079,7 +2079,7 @@ function renderHistory(){
 // ═══════════════════════════════════════
 // ADMIN
 // ═══════════════════════════════════════
-const renderAdmin = requireAdmin(// ── DEMO CHECK-IN SEEDER ──
+// ── DEMO CHECK-IN SEEDER ──
 async function generateDemoCheckins(){
   if(!CU || CU.role!=='admin'){toast('Admin only','r');return;}
   const users = Object.values(gDB().users || {}).filter(u => u.role!=='admin' && u.status==='approved');
@@ -2119,7 +2119,7 @@ async function generateDemoCheckins(){
   renderDash(); renderHistory();
 }
 
-function renderAdmin(){
+const renderAdmin = requireAdmin(function renderAdmin(){
   if(!CU||CU.role!=='admin')return;
   const d=gDB();
   const allMembers=Object.values(d.users).filter(u=>u.role!=='admin');
