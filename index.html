@@ -952,6 +952,7 @@ firebase.auth().onAuthStateChanged(async (user) => {
 
 function gDB(){return CACHE}
 function today(){return new Date().toISOString().slice(0,10)}
+  function findDemoForExercise(name){if(!name||!CACHE.demos)return null;const n=name.toLowerCase().trim();return Object.values(CACHE.demos).find(d=>d.name&&d.name.toLowerCase().trim()===n)||null;}
 
 function onDataUpdate(){
   // Keep the logged-in user's record fresh (so approval status updates live)
@@ -1674,7 +1675,7 @@ function renderProgramScreen(){
               <div class="prog-day-mini-nm">${escHtml(d.name)}</div>
               <button class="b-secondary" style="width:auto;padding:6px 12px;font-size:11px" onclick="startWorkoutFromProgramDay('${mine.id}','${d.id}')">▶ Log this day</button>
             </div>
-            ${(d.exercises||[]).map(ex=>`<div class="prog-ex-mini-row"><span class="prog-ex-mini-nm">${escHtml(ex.name)}</span><span class="prog-ex-mini-tgt">${ex.targetSets||'—'}×${escHtml(ex.targetReps||'—')}</span></div>`).join('')||'<div style="font-size:11px;color:var(--gry2)">No exercises listed</div>'}
+                       ${(d.exercises||[]).map(ex=>{const demo=findDemoForExercise(ex.name);return `<div class="prog-ex-mini-row"><span class="prog-ex-mini-nm">${escHtml(ex.name)}</span><span style="display:flex;align-items:center;gap:8px;"><span class="prog-ex-mini-tgt">${ex.targetSets||'—'}×${escHtml(ex.targetReps||'—')}</span>${demo?`<button class="b-secondary" style="padding:4px 10px;font-size:10px;border-radius:6px;" onclick="playDemoVideo('${demo.id}')">▶ Demo</button>`:''}</span></div>`;}).join('')||'<div style="font-size:11px;color:var(--gry2)">No exercises listed</div>'}
           </div>`).join('')||'<div style="font-size:12px;color:var(--gry)">This program has no days yet.</div>'}
         <button class="cal-toggle-btn" onclick="assignProgramToUser('${u.email}',null)">✕ Unassign this program</button>
       </div>`;
@@ -1699,6 +1700,28 @@ function renderProgramScreen(){
     }
   }
 }
+
+function playDemoVideo(id){
+  const demo=CACHE.demos[id];
+  if(!demo||!demo.videoUrl){toast('Demo not found','r');return;}
+  let ov=document.getElementById('demoOverlay');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='demoOverlay';
+    ov.style.cssText='position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.92);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:16px;';
+    ov.innerHTML=`<div style="width:100%;max-width:480px;background:var(--dark);border:1px solid var(--bdr2);border-radius:16px;padding:16px;position:relative;"><button onclick="closeDemoVideo()" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--gry);font-size:20px;cursor:pointer;z-index:2;">✕</button><div id="demoOverlayTitle" style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;font-style:italic;color:var(--wht);margin-bottom:10px;padding-right:30px;"></div><video id="demoOverlayVideo" controls preload="metadata" style="width:100%;border-radius:10px;display:block;max-height:60vh;background:#000;"></video></div>`;
+    document.body.appendChild(ov);
+  }
+  document.getElementById('demoOverlayTitle').textContent=demo.name;
+  const vid=document.getElementById('demoOverlayVideo');
+  vid.src=demo.videoUrl;
+  vid.load();
+  ov.style.display='flex';
+}
+function closeDemoVideo(){
+  const ov=document.getElementById('demoOverlay');
+  if(ov){const vid=document.getElementById('demoOverlayVideo');if(vid){vid.pause();vid.src='';}ov.style.display='none';}
+}  
 
 // ── Admin: program builder ──
 let progBuilder={id:null,name:'',description:'',days:[],_open:false};
