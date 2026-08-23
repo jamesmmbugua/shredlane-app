@@ -2516,6 +2516,282 @@ onHu(5);renderSpeedo(0);
 const nd=new Date();
 // ciDate element replaced by dpDisplay — handled in initCI()
 
+// ═══════════════════════════════════════
+// CONFIG — paste your Cloudinary details here
+// ═══════════════════════════════════════
+const CLOUD_NAME = 'sx8seywi';        // ← replace
+const UPLOAD_PRESET = 'shredlane_unsigned';   // ← replace
+
+// ═══════════════════════════════════════
+// PHOTOS
+// ═══════════════════════════════════════
+let photoDate = today();
+let photoFiles = {front:null, side:null, back:null};
+let photoPreviews = {front:null, side:null, back:null};
+
+function setPhotoDate(d){
+  photoDate = d;
+  document.getElementById('photoDateIn').value = d;
+  document.getElementById('photoDateDisp').textContent = d===today() ? 'TODAY' : fmtDate(d);
+  document.getElementById('photoPastNote').style.display = d===today() ? 'none' : 'block';
+  renderPhotoPreviewStatus();
+}
+function onPhotoDateChange(v){ setPhotoDate(v); }
+function fmtDate(d){ const [y,m,day]=d.split('-'); return `${day}/${m}/${y}`; }
+
+function onPhotoFile(type, input){
+  const file = input.files[0];
+  if(!file) return;
+  if(file.size > 8*1024*1024){ toast('Image must be under 8MB','r'); input.value=''; return; }
+  photoFiles[type] = file;
+  const url = URL.createObjectURL(file);
+  photoPreviews[type] = url;
+  const box = document.getElementById(type+'Preview');
+  box.innerHTML = `<img src="${url}" style="width:100%;display:block;border-radius:8px;">`;
+  box.style.display = 'block';
+  renderPhotoPreviewStatus();
+}
+function renderPhotoPreviewStatus(){
+  ['front','side','back'].forEach(t=>{
+    const el = document.getElementById(t+'Status');
+    el.textContent = photoFiles[t] ? '✓' : '●';
+    el.style.color = photoFiles[t] ? 'var(--grn)' : 'var(--gry2)';
+  });
+}
+
+async function uploadToCloudinary(file, folder){
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('upload_preset', UPLOAD_PRESET);
+  fd.append('folder', folder);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, {method:'POST', body:fd});
+  if(!res.ok) throw new Error('Upload failed');
+  const data = await res.json();
+  return data.secure_url;
+}
+
+async function savePhotos(){
+  if(!CU) return;
+  if(CU.status==='pending'){ toast('⏳ Awaiting approval','a'); return; }
+  const hasAny = photoFiles.front || photoFiles.side || photoFiles.back;
+  if(!hasAny){ toast('Select at least one photo','r'); return; }
+
+  const btn = document.querySelector('#scr-photos .save-btn');
+  const orig = btn.textContent;
+  btn.textContent = 'Uploading…'; btn.disabled = true;
+
+  try {
+    const email = CU.email;
+    const date = photoDate;
+    const raw = gDB().photos[email];
+    const list = (Array.isArray(raw)?raw:[]).filter(e=>e&&e.date).slice();
+    const idx = list.findIndex(x=>x.date===date);
+    const entry = idx>=0 ? Object.assign({}, list[idx]) : {date:date, created:Date.now()};
+    entry.updated = Date.now();
+
+    for(const type of ['front','side','back']){
+      if(photoFiles[type]){
+        entry[type] = await uploadToCloudinary(photoFiles[type], `shredlane/photos/${email}/${date}`);
+      }
+    }
+
+    if(idx>=0) list[idx] = entry; else list.push(entry);
+    await fdb.collection('photos').doc(email).set({entries:list});
+    CACHE.photos[email] = list;
+
+    toast('📸 Photos saved!','g');
+    photoFiles = {front:null, side:null, back:null};
+    ['front','side','back'].forEach(t=>{
+      document.getElementById(t+'File').value='';
+      document.getElementById(t+'Preview').style.display='none';
+      document.getElementById(t+'Preview').innerHTML='';
+    });
+    renderPhotoPreviewStatus();
+    renderPhotos();
+  } catch(e){
+    console.error(e);
+    toast('Upload failed — check connection','r');
+  } finally {
+    btn.textContent = orig; btn.disabled = false;
+  }
+}
+
+function renderPhotos(){
+  const container = document.getElementById('photoGallery');
+  const card = document.getElementById('photoGalleryCard');
+  if(!container) return;
+  const email = VIEWUSER ? VIEWUSER.email : CU.email;
+  const raw = gDB().photos[email];
+  const list = (Array.isArray(raw)?raw:[]).filter(e=>e&&e.date).sort((a,b)=>b.date.localeCompare(a.date));
+  if(!list.length){ card.style.display='none'; return; }
+  card.style.display='block';
+
+  container.innerHTML = list.map((entry,i)=>{
+    const thumbs = ['front','side','back'].map(t=>{
+      if(!entry[t]) return '';
+      return `<div style="flex:1;min-width:80px;">
+        <div style="font-size:9px;font-weight:700;color:var(--gry);text-transform:uppercase;margin-bottom:4px;">${t}</div>
+        <a href="${entry[t]}" target="_blank" style="display:block;border-radius:8px;overflow:hidden;border:1px solid var(--bdr);">
+          <img src="${entry[t]}" style="width:100%;height:110px;object-fit:cover;display:block;">
+        </a>
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--bdr);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--grn);">${fmtDate(entry.date)}</div>
+        ${!VIEWUSER ? `<button class="b-lgt" style="padding:4px 10px;font-size:11px;" onclick="deletePhotoSet('${entry.date}')">🗑 Delete</button>` : ''}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">${thumbs}</div>
+    </div>`;
+  }).join('');
+}
+
+async function deletePhotoSet(date){
+  if(!confirm('Delete this photo set?')) return;
+  const email = CU.email;
+  const raw = gDB().photos[email];
+  const list = (Array.isArray(raw)?raw:[]).filter(e=>e&&e.date);
+  const idx = list.findIndex(x=>x.date===date);
+  if(idx<0) return;
+  list.splice(idx,1);
+  await fdb.collection('photos').doc(email).set({entries:list});
+  CACHE.photos[email]=list;
+  toast('Photo set deleted','g');
+  renderPhotos();
+}
+
+// ═══════════════════════════════════════
+// EXERCISE DEMO LIBRARY
+// ═══════════════════════════════════════
+let demoUploadFile = null;
+function onDemoFile(input){
+  const f = input.files[0];
+  if(!f) return;
+  if(f.size > 50*1024*1024){ toast('Video must be under 50MB','r'); input.value=''; return; }
+  demoUploadFile = f;
+  document.getElementById('demoFileName').textContent = f.name + ' (' + (f.size/1024/1024).toFixed(1) + ' MB)';
+}
+async function saveDemo(){
+  if(!CU || CU.role!=='admin'){ toast('Admin only','r'); return; }
+  const name = document.getElementById('demoName').value.trim();
+  const group = document.getElementById('demoGroup').value;
+  if(!name){ toast('Enter exercise name','r'); return; }
+  if(!group){ toast('Select muscle group','r'); return; }
+  if(!demoUploadFile){ toast('Select a video file','r'); return; }
+
+  const btn = document.querySelector('#scr-admin button[onclick="saveDemo()"]');
+  const orig = btn ? btn.textContent : 'Upload';
+  if(btn){ btn.textContent='Uploading…'; btn.disabled=true; }
+
+  try {
+    const url = await uploadToCloudinary(demoUploadFile, 'shredlane/demos');
+    const id = 'd'+Date.now();
+    const data = {id, name, group, url, created:Date.now()};
+    await fdb.collection('demos').doc(id).set(data);
+    CACHE.demos[id] = data;
+
+    document.getElementById('demoName').value='';
+    document.getElementById('demoGroup').value='';
+    document.getElementById('demoFile').value='';
+    document.getElementById('demoFileName').textContent='';
+    demoUploadFile=null;
+    toast('🎬 Demo uploaded','g');
+    renderAdmin();
+    if(document.getElementById('scr-library').classList.contains('active')) renderLibrary();
+  } catch(e){
+    console.error(e);
+    toast('Upload failed','r');
+  } finally {
+    if(btn){ btn.textContent=orig; btn.disabled=false; }
+  }
+}
+function renderLibrary(){
+  const grid = document.getElementById('libraryGrid');
+  if(!grid) return;
+  const demos = Object.values(gDB().demos||{}).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if(!demos.length){ grid.innerHTML='<div class="wkt-empty">No demo videos yet — check back soon.</div>'; return; }
+
+  const groups = {};
+  demos.forEach(d=>{ (groups[d.group]=groups[d.group]||[]).push(d); });
+  grid.innerHTML = Object.entries(groups).map(([group, list])=>`
+    <div class="card">
+      <div class="card-lbl">${escHtml(group)}</div>
+      <div style="display:grid;grid-template-columns:1fr;gap:10px;">
+        ${list.map(d=>`
+          <div style="background:var(--dark2);border:1px solid var(--bdr2);border-radius:10px;padding:12px;">
+            <div style="font-size:14px;font-weight:700;color:var(--wht);margin-bottom:8px;">${escHtml(d.name)}</div>
+            <video controls preload="metadata" style="width:100%;border-radius:8px;display:block;max-height:220px;background:#000;">
+              <source src="${d.url}" type="video/mp4">
+            </video>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════
+// ADMIN: RENDER DEMOS & MEMBER PHOTOS
+// ═══════════════════════════════════════
+function renderAdminDemos(){
+  const el = document.getElementById('adminDemoList');
+  if(!el) return;
+  const demos = Object.values(gDB().demos||{}).sort((a,b)=>b.created-a.created);
+  if(!demos.length){ el.innerHTML='<div class="mc" style="font-size:12px;color:var(--gry);">No demos uploaded yet.</div>'; return; }
+  el.innerHTML = demos.map(d=>`
+    <div class="mc">
+      <div class="mc-top">
+        <div>
+          <div class="mc-nm">${escHtml(d.name)}</div>
+          <div class="mc-em">${escHtml(d.group)} • ${new Date(d.created).toLocaleDateString()}</div>
+        </div>
+        <button class="reject-btn" onclick="deleteDemo('${d.id}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+async function deleteDemo(id){
+  if(!confirm('Delete this demo?')) return;
+  try{
+    await fdb.collection('demos').doc(id).delete();
+    delete CACHE.demos[id];
+    toast('Demo deleted','g');
+    renderAdmin();
+  }catch(e){ console.error(e); toast('Delete failed','r'); }
+}
+function renderAdminMemberPhotos(){
+  const el = document.getElementById('adminPhotoList');
+  if(!el) return;
+  const users = Object.values(gDB().users||{}).filter(u=>u.role!=='admin' && u.status==='approved');
+  if(!users.length){ el.innerHTML='<div class="mc" style="font-size:12px;color:var(--gry);">No approved members yet.</div>'; return; }
+
+  el.innerHTML = users.map(u=>{
+    const raw = gDB().photos[u.email];
+    const list = (Array.isArray(raw)?raw:[]).filter(e=>e&&e.date).sort((a,b)=>b.date.localeCompare(a.date));
+    const latest = list[0];
+    if(!latest) return '';
+    const thumb = latest.front || latest.side || latest.back;
+    return `<div class="mc">
+      <div class="mc-top">
+        <div class="mc-av" style="background:${COLORS[u.name.charCodeAt(0)%COLORS.length]}">${u.name.charAt(0).toUpperCase()}</div>
+        <div>
+          <div class="mc-nm">${escHtml(u.name)}</div>
+          <div class="mc-em">${u.email} • ${list.length} set${list.length!==1?'s':''}</div>
+        </div>
+        <button class="b-grn" style="padding:6px 12px;font-size:11px;" onclick="viewMemberPhotos('${u.email}')">View</button>
+      </div>
+      ${thumb ? `<div style="margin-top:8px;"><a href="${thumb}" target="_blank"><img src="${thumb}" style="height:90px;width:auto;border-radius:8px;border:1px solid var(--bdr);"></a></div>` : ''}
+    </div>`;
+  }).join('') || '<div class="mc" style="font-size:12px;color:var(--gry);">No member photos yet.</div>';
+}
+function viewMemberPhotos(email){
+  const user = gDB().users[email];
+  if(!user) return;
+  VIEWUSER = user;
+  goTab('photos');
+  toast('Viewing as '+user.name,'a');
+}
+  
 </script>
 </body>
 </html>
