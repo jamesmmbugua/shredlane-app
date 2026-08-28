@@ -895,6 +895,11 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const fdb = firebase.firestore();
+// Enable offline persistence so writes survive refreshes & bad connections
+fdb.enablePersistence({synchronizeTabs:true}).catch(err=>{
+  if(err.code==='failed-precondition') console.log('Persistence: multiple tabs open');
+  else if(err.code==='unimplemented') console.log('Persistence: browser not supported');
+});
 
 // In-memory mirror of the cloud DB, kept live via onSnapshot listeners.
 let CACHE = {users:{}, checkins:{}, workouts:{}, programs:{}};
@@ -1436,18 +1441,28 @@ async function saveCI(){
   const no=document.getElementById('ciNotes').value.trim();
   if(!wt||isNaN(wt)){toast('Please enter your weight','r');return;}
   if(!wa||isNaN(wa)){toast('Please enter your waist','r');return;}
-  const raw=gDB().checkins[CU.email];
-  const list=(Array.isArray(raw)?raw:[]).filter(e=>e&&e.date).slice();
   const t=selectedDate||today();
-  const idx=list.findIndex(c=>c.date===t);
   const entry={date:t,weight:wt,waist:wa,steps:st,sleep:sl,hunger:hu,notes:no,protein:proteinPct,workout:workoutDone,sleepQual:sleepQual,water:waterCount};
-  if(idx>=0)list[idx]=entry;
-  else list.push(entry);
   try{
-    await fdb.collection('checkins').doc(CU.email).set({entries:list});
-    CACHE.checkins[CU.email]=list; // optimistic local update
+    await fdb.runTransaction(async transaction=>{
+      const ref=fdb.collection('checkins').doc(CU.email);
+      const snap=await transaction.get(ref);
+      let list=[];
+      if(snap.exists){
+        const data=snap.data();
+        list=(Array.isArray(data.entries)?data.entries:[]).filter(e=>e&&e.date);
+      }
+      const idx=list.findIndex(c=>c.date===t);
+      if(idx>=0)list[idx]=entry;else list.push(entry);
+      transaction.set(ref,{entries:list});
+    });
+    if(!CACHE.checkins)CACHE.checkins={};
+    CACHE.checkins[CU.email]=CACHE.checkins[CU.email]||[];
+    const localIdx=CACHE.checkins[CU.email].findIndex(c=>c.date===t);
+    if(localIdx>=0)CACHE.checkins[CU.email][localIdx]=entry;
+    else CACHE.checkins[CU.email].push(entry);
     toast('🔥 Check-in saved!','g');
-    renderDash();
+    renderDash(); renderHistory();
   }catch(e){
     console.error(e);
     toast('⚠️ Could not save — check your connection','r');
@@ -1532,15 +1547,24 @@ async function saveWorkout(){
       weight:(s.weight===''||s.weight==null)?null:parseFloat(s.weight)
     }))
   }));
-  const raw=gDB().workouts[u.email];
-  const list=(Array.isArray(raw)?raw:[]).filter(e=>e&&e.date&&e.id).slice();
   const entry={id:wktBuilder.id||('w'+Date.now()),date:d,title,exercises};
-  const idx=list.findIndex(w=>w.id===entry.id);
-  if(idx>=0)list[idx]=entry;else list.push(entry);
   try{
-    await fdb.collection('workouts').doc(u.email).set({entries:list});
-    CACHE.workouts[u.email]=list;
-    toast(idx>=0?'🏋️ Workout updated!':'🏋️ Workout saved!','g');
+    await fdb.runTransaction(async transaction=>{
+      const ref=fdb.collection('workouts').doc(u.email);
+      const snap=await transaction.get(ref);
+      let list=[];
+      if(snap.exists){
+        const data=snap.data();
+        list=(Array.isArray(data.entries)?data.entries:[]).filter(e=>e&&e.date&&e.id);
+      }
+      const idx=list.findIndex(w=>w.id===entry.id);
+      if(idx>=0)list[idx]=entry;else list.push(entry);
+      transaction.set(ref,{entries:list});
+    });
+    // Refresh local cache from server to stay in sync
+    const fresh=await fdb.collection('workouts').doc(u.email).get();
+    if(fresh.exists) CACHE.workouts[u.email]=fresh.data().entries||[];
+    toast(wktBuilder.id?'🏋️ Workout updated!':'🏋️ Workout saved!','g');
     initWorkoutForm();
   }catch(e){
     console.error(e);
@@ -1564,11 +1588,18 @@ async function deleteWorkout(id){
   if(!CU)return;
   const u=VIEWUSER||CU;
   if(!confirm('Delete this workout entry?'))return;
-  const raw=gDB().workouts[u.email];
-  const list=(Array.isArray(raw)?raw:[]).filter(e=>e&&e.id&&e.id!==id);
   try{
-    await fdb.collection('workouts').doc(u.email).set({entries:list});
-    CACHE.workouts[u.email]=list;
+    await fdb.runTransaction(async transaction=>{
+      const ref=fdb.collection('workouts').doc(u.email);
+      const snap=await transaction.get(ref);
+      if(!snap.exists) return;
+      const data=snap.data();
+      const list=(Array.isArray(data.entries)?data.entries:[]).filter(e=>e&&e.id&&e.id!==id);
+      transaction.set(ref,{entries:list});
+    });
+    const fresh=await fdb.collection('workouts').doc(u.email).get();
+    if(fresh.exists) CACHE.workouts[u.email]=fresh.data().entries||[];
+    else CACHE.workouts[u.email]=[];
     toast('Workout deleted','r');
     renderWorkoutsScreen();
   }catch(e){console.error(e);toast('⚠️ Could not delete — check connection','r');}
@@ -2082,13 +2113,24 @@ function renderHistory(){
 // ── DEMO CHECK-IN SEEDER ──
 async function generateDemoCheckins(){
   if(!CU || CU.role!=='admin'){toast('Admin only','r');return;}
+  const checkinsSnap = await fdb.collection('checkins').get();
+  const hasAnyData = !checkinsSnap.empty && checkinsSnap.docs.some(d=>{
+    const data=d.data();
+    return Array.isArray(data.entries) && data.entries.length>0;
+  });
+  if(hasAnyData){
+    if(!confirm('Some members already have check-in data. This will OVERWRITE it with demo data. Continue?'))return;
+  }
   const users = Object.values(gDB().users || {}).filter(u => u.role!=='admin' && u.status==='approved');
   if(!users.length){toast('No approved members to seed','a');return;}
   const today = new Date();
   let seeded = 0;
   for(const u of users){
     const email = u.email;
-    if((gDB().checkins?.[email]?.length||0)>0) continue;
+    const userSnap = await fdb.collection('checkins').doc(email).get();
+    if(userSnap.exists && Array.isArray(userSnap.data().entries) && userSnap.data().entries.length>0){
+      continue;
+    }
     const baseWeight = parseFloat(u.baseWeight)||200;
     const baseWaist  = parseFloat(u.baseWaist)||40;
     const entries = [];
@@ -2777,21 +2819,37 @@ async function savePhotos(){
   try {
     const email = CU.email;
     const date = photoDate;
-    const raw = gDB().photos[email];
-    const list = (Array.isArray(raw)?raw:[]).filter(e=>e&&e.date).slice();
-    const idx = list.findIndex(x=>x.date===date);
-    const entry = idx>=0 ? Object.assign({}, list[idx]) : {date:date, created:Date.now()};
-    entry.updated = Date.now();
 
+    // Upload photos first (outside transaction — Cloudinary can't be rolled back)
+    const uploads = {};
     for(const type of ['front','side','back']){
       if(photoFiles[type]){
-        entry[type] = await uploadToCloudinary(photoFiles[type], `shredlane/photos/${email}/${date}`);
+        uploads[type] = await uploadToCloudinary(photoFiles[type], `shredlane/photos/${email}/${date}`);
       }
     }
 
-    if(idx>=0) list[idx] = entry; else list.push(entry);
-    await fdb.collection('photos').doc(email).set({entries:list});
-    CACHE.photos[email] = list;
+    // Now update Firestore atomically
+    await fdb.runTransaction(async transaction=>{
+      const ref = fdb.collection('photos').doc(email);
+      const snap = await transaction.get(ref);
+      let list = [];
+      if(snap.exists){
+        const data = snap.data();
+        list = (Array.isArray(data.entries)?data.entries:[]).filter(e=>e&&e.date);
+      }
+      const idx = list.findIndex(x=>x.date===date);
+      const entry = idx>=0 ? Object.assign({}, list[idx]) : {date:date, created:Date.now()};
+      entry.updated = Date.now();
+      for(const type of ['front','side','back']){
+        if(uploads[type]) entry[type] = uploads[type];
+      }
+      if(idx>=0) list[idx] = entry; else list.push(entry);
+      transaction.set(ref, {entries:list});
+    });
+
+    // Refresh cache from server
+    const fresh = await fdb.collection('photos').doc(email).get();
+    if(fresh.exists) CACHE.photos[email] = fresh.data().entries||[];
 
     toast('📸 Photos saved!','g');
     photoFiles = {front:null, side:null, back:null};
