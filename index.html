@@ -902,11 +902,18 @@ fdb.enablePersistence({synchronizeTabs:true}).catch(err=>{
 });
 
 // In-memory mirror of the cloud DB, kept live via onSnapshot listeners.
-let CACHE = {users:{}, checkins:{}, workouts:{}, programs:{}};
+let CACHE = {users:{}, checkins:{}, workouts:{}, programs:{}, photos:{}, demos:{}};
 let fbReady = false;
 let checkinsReady = false;
 let workoutsReady = false;
 let programsReady = false;
+
+// Active listener unsubscribe functions (so we can clean up on logout)
+let unsubscribers = [];
+function clearListeners(){
+  unsubscribers.forEach(u => { try{ u(); }catch(e){} });
+  unsubscribers = [];
+}
 
 // Auth helpers
 function requireAdmin(fn){
@@ -947,8 +954,14 @@ firebase.auth().onAuthStateChanged(async (user) => {
       }
     }catch(e){ console.error('Auth state error:',e); }
   } else {
+    clearListeners();
     CU = null;
     VIEWUSER = null;
+    // Reset ready flags so UI doesn't show stale data
+    fbReady = false;
+    checkinsReady = false;
+    workoutsReady = false;
+    programsReady = false;
     document.getElementById('page-app').classList.remove('active');
     document.getElementById('page-landing').classList.add('active');
     document.getElementById('adminTab').style.display = 'none';
@@ -981,70 +994,115 @@ function onDataUpdate(){
   if(activeScr.id==='scr-library') renderLibrary();
 }
 
-// Live listeners — every device sees the same data in (near) real time.
-fdb.collection('users').onSnapshot(snap=>{
-  const users={};
-  snap.forEach(doc=>users[doc.id]=doc.data());
-  CACHE.users=users;
-  fbReady=true;
-  onDataUpdate();
-},err=>{ console.error(err); });
+// ═══════════════════════════════════════
+// DATA LISTENERS
+// Admins get full-collection listeners (can see/overwrite everyone).
+// Regular members only listen to their own documents (survives refresh).
+// Programs & demos are public-read so both roles use collection listeners.
+// ═══════════════════════════════════════
+function startDataListeners(){
+  clearListeners();
+  if(!CU) return;
 
-fdb.collection('checkins').onSnapshot(snap=>{
-  const checkins={};
-  snap.forEach(doc=>{
-    const data=doc.data();
-    // Guard: document may be deleted/empty after manual Firebase edits
-    // Strip null/undefined slots from manual Firebase deletions
-    checkins[doc.id]=(data&&Array.isArray(data.entries))?data.entries.filter(e=>e&&e.date):[];
-  });
-  CACHE.checkins=checkins;
-  checkinsReady=true;
-  onDataUpdate();
-},err=>console.error(err));
+  // ── Programs (public read) ──
+  unsubscribers.push(fdb.collection('programs').onSnapshot(snap=>{
+    const programs={};
+    snap.forEach(doc=>{
+      const data=doc.data();
+      if(data&&data.name) programs[doc.id]=Object.assign({id:doc.id},data);
+    });
+    CACHE.programs=programs;
+    programsReady=true;
+    onDataUpdate();
+  },err=>console.error('programs listener',err)));
 
-fdb.collection('workouts').onSnapshot(snap=>{
-  const workouts={};
-  snap.forEach(doc=>{
-    const data=doc.data();
-    workouts[doc.id]=(data&&Array.isArray(data.entries))?data.entries.filter(e=>e&&e.date&&e.id):[];
-  });
-  CACHE.workouts=workouts;
-  workoutsReady=true;
-  onDataUpdate();
-},err=>console.error(err));
+  // ── Demos (public read) ──
+  unsubscribers.push(fdb.collection('demos').onSnapshot(snap=>{
+    const demos={};
+    snap.forEach(doc=>{
+      const data=doc.data();
+      if(data&&data.id) demos[doc.id]=data;
+    });
+    CACHE.demos=demos;
+    onDataUpdate();
+  },err=>console.error('demos listener',err)));
 
-fdb.collection('programs').onSnapshot(snap=>{
-  const programs={};
-  snap.forEach(doc=>{
-    const data=doc.data();
-    if(data&&data.name) programs[doc.id]=Object.assign({id:doc.id},data);
-  });
-  CACHE.programs=programs;
-  programsReady=true;
-  onDataUpdate();
-},err=>console.error(err));
+  if(CU.role==='admin'){
+    // ── ADMIN: full collection listeners ──
+    unsubscribers.push(fdb.collection('users').onSnapshot(snap=>{
+      const users={};
+      snap.forEach(doc=>users[doc.id]=doc.data());
+      CACHE.users=users;
+      fbReady=true;
+      onDataUpdate();
+    },err=>console.error('users listener',err)));
 
-  
-fdb.collection('photos').onSnapshot(snap=>{
-  const photos={};
-  snap.forEach(doc=>{
-    const data=doc.data();
-    photos[doc.id]=(data&&Array.isArray(data.entries))?data.entries.filter(e=>e&&e.date):[];
-  });
-  CACHE.photos=photos;
-  onDataUpdate();
-},err=>console.error(err));
+    unsubscribers.push(fdb.collection('checkins').onSnapshot(snap=>{
+      const checkins={};
+      snap.forEach(doc=>{
+        const data=doc.data();
+        checkins[doc.id]=(data&&Array.isArray(data.entries))?data.entries.filter(e=>e&&e.date):[];
+      });
+      CACHE.checkins=checkins;
+      checkinsReady=true;
+      onDataUpdate();
+    },err=>console.error('checkins listener',err)));
 
-fdb.collection('demos').onSnapshot(snap=>{
-  const demos={};
-  snap.forEach(doc=>{
-    const data=doc.data();
-    if(data&&data.id) demos[doc.id]=data;
-  });
-  CACHE.demos=demos;
-  onDataUpdate();
-},err=>console.error(err));
+    unsubscribers.push(fdb.collection('workouts').onSnapshot(snap=>{
+      const workouts={};
+      snap.forEach(doc=>{
+        const data=doc.data();
+        workouts[doc.id]=(data&&Array.isArray(data.entries))?data.entries.filter(e=>e&&e.date&&e.id):[];
+      });
+      CACHE.workouts=workouts;
+      workoutsReady=true;
+      onDataUpdate();
+    },err=>console.error('workouts listener',err)));
+
+    unsubscribers.push(fdb.collection('photos').onSnapshot(snap=>{
+      const photos={};
+      snap.forEach(doc=>{
+        const data=doc.data();
+        photos[doc.id]=(data&&Array.isArray(data.entries))?data.entries.filter(e=>e&&e.date):[];
+      });
+      CACHE.photos=photos;
+      onDataUpdate();
+    },err=>console.error('photos listener',err)));
+
+  } else {
+    // ── MEMBER: only own documents ──
+    const email = CU.email;
+
+    // Own user profile (so approval status / program assignment stay live)
+    unsubscribers.push(fdb.collection('users').doc(email).onSnapshot(snap=>{
+      if(snap.exists){
+        CACHE.users[email]=snap.data();
+        fbReady=true;
+        onDataUpdate();
+      }
+    },err=>console.error('my user listener',err)));
+
+    unsubscribers.push(fdb.collection('checkins').doc(email).onSnapshot(snap=>{
+      const data = snap.exists ? snap.data() : null;
+      CACHE.checkins[email]=(data&&Array.isArray(data.entries))?data.entries.filter(e=>e&&e.date):[];
+      checkinsReady=true;
+      onDataUpdate();
+    },err=>console.error('my checkins listener',err)));
+
+    unsubscribers.push(fdb.collection('workouts').doc(email).onSnapshot(snap=>{
+      const data = snap.exists ? snap.data() : null;
+      CACHE.workouts[email]=(data&&Array.isArray(data.entries))?data.entries.filter(e=>e&&e.date&&e.id):[];
+      workoutsReady=true;
+      onDataUpdate();
+    },err=>console.error('my workouts listener',err)));
+
+    unsubscribers.push(fdb.collection('photos').doc(email).onSnapshot(snap=>{
+      const data = snap.exists ? snap.data() : null;
+      CACHE.photos[email]=(data&&Array.isArray(data.entries))?data.entries.filter(e=>e&&e.date):[];
+      onDataUpdate();
+    },err=>console.error('my photos listener',err)));
+  }
+}
 
 // ═══════════════════════════════════════
 // STATE
@@ -1127,8 +1185,10 @@ function onSuccess(user){
   document.getElementById('uAv').style.background=ci;
   document.getElementById('uNm').textContent=user.name.split(' ')[0];
   document.getElementById('adminTab').style.display=user.role==='admin'?'flex':'none';
+  // Start the correct listeners for this role (admin = full collection, member = own docs only)
+  startDataListeners();
   goTab('dashboard',document.querySelector('.tb'));
-    setPhotoDate(today());
+  setPhotoDate(today());
   renderDash();
   toast('🔥 Welcome, '+user.name.split(' ')[0]+'!','g');
 }
@@ -1152,6 +1212,7 @@ async function changeMyPassword(){
 }
 
 async function doLogout(){
+  clearListeners();
   await firebase.auth().signOut();
 }
 
