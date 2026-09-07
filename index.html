@@ -438,7 +438,7 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
 </style>
 </head>
 <body>
-<div id="offlineBanner" role="status" aria-live="polite">📡 You’re offline — changes will sync when you’re back online</div>
+<div id="offlineBanner" role="status" aria-live="polite">📡 You’re offline — check-ins & workouts still save on this phone and sync later</div>
 <div id="pwaInstall" role="dialog" aria-label="Install app">
   <div style="font-size:13px;font-weight:700;color:var(--wht);flex:1">Install Shredlane on your home screen for faster daily check-ins</div>
   <button class="b-grn" style="width:auto;padding:8px 14px;background:var(--grn);color:#000;border:none;border-radius:8px;font-weight:800;cursor:pointer" onclick="installPWA()">Install</button>
@@ -1016,29 +1016,71 @@ function mapAuthError(e){
   return codes[e.code] || 'Authentication failed. Please try again.';
 }
 
+// Keep members signed in across app restarts (local device storage)
+try{
+  firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+}catch(e){ console.log('Auth persistence:', e); }
+
+// Remember last approved profile so cold start feels instant
+function cacheProfileLocal(profile){
+  try{ if(profile&&profile.email) localStorage.setItem('sl_profile', JSON.stringify(profile)); }catch(e){}
+}
+function readProfileLocal(){
+  try{ const s=localStorage.getItem('sl_profile'); return s?JSON.parse(s):null; }catch(e){ return null; }
+}
+function clearProfileLocal(){
+  try{ localStorage.removeItem('sl_profile'); }catch(e){}
+}
+
+let _sessionRestored = false; // avoid "Welcome" toast on every open
+
 // Firebase Auth state listener + data sync
 firebase.auth().onAuthStateChanged(async (user) => {
   if(user){
     try{
-      const snap = await fdb.collection('users').doc(user.email).get();
-      if(snap.exists){
-        const profile = snap.data();
+      const email = (user.email||'').toLowerCase();
+      let profile = null;
+      // Prefer live/cache doc; fall back to last local profile if offline
+      try{
+        const snap = await fdb.collection('users').doc(email).get();
+        if(snap.exists) profile = snap.data();
+      }catch(netErr){
+        console.log('Profile fetch offline/slow:', netErr);
+        const local = readProfileLocal();
+        if(local && (local.email||'').toLowerCase()===email) profile = local;
+      }
+      if(!profile){
+        const local = readProfileLocal();
+        if(local && (local.email||'').toLowerCase()===email) profile = local;
+      }
+      if(profile){
         if(profile.status === 'approved'){
           CU = profile;
-          onSuccess(profile);
+          cacheProfileLocal(profile);
+          onSuccess(profile, {silent: _sessionRestored});
+          _sessionRestored = true;
         } else {
+          clearProfileLocal();
           await firebase.auth().signOut();
           toast('Your account is pending admin approval.','a');
         }
       } else {
-        await firebase.auth().signOut();
-        toast('Account no longer active.','r');
+        // Only sign out if we are online and the account truly missing
+        if(navigator.onLine){
+          clearProfileLocal();
+          await firebase.auth().signOut();
+          toast('Account no longer active.','r');
+        } else {
+          toast('Offline — open once with internet to restore your session.','a');
+        }
       }
     }catch(e){ console.error('Auth state error:',e); }
   } else {
     clearListeners();
     CU = null;
     VIEWUSER = null;
+    _sessionRestored = false;
+    clearProfileLocal();
     // Reset ready flags so UI doesn't show stale data
     fbReady = false;
     checkinsReady = false;
@@ -1267,8 +1309,10 @@ async function doRegister(){
   }
 }
 
-function onSuccess(user){
+function onSuccess(user, opts){
+  opts = opts || {};
   CU=user;
+  cacheProfileLocal(user);
   _lastKnownProgramId = user.programId || null; // avoid false "program assigned" toast on login
   closeAuth();
   document.getElementById('page-landing').classList.remove('active');
@@ -1283,7 +1327,9 @@ function onSuccess(user){
   goTab('dashboard',document.querySelector('.tb'));
   setPhotoDate(today());
   renderDash();
-  toast('🔥 Welcome, '+user.name.split(' ')[0]+'!','g');
+  if(!opts.silent){
+    toast('🔥 Welcome, '+user.name.split(' ')[0]+'!','g');
+  }
 }
 
 async function changeMyPassword(){
@@ -1306,6 +1352,7 @@ async function changeMyPassword(){
 
 async function doLogout(){
   clearListeners();
+  clearProfileLocal();
   await firebase.auth().signOut();
 }
 
@@ -1608,29 +1655,42 @@ async function saveCI(){
   if(!wa||isNaN(wa)){toast('Please enter your waist','r');return;}
   const t=selectedDate||today();
   const entry={date:t,weight:wt,waist:wa,steps:st,sleep:sl,hunger:hu,notes:no,protein:proteinPct,workout:workoutDone,sleepQual:sleepQual,water:waterCount};
+  const offline = (typeof navigator!=='undefined' && navigator.onLine===false);
   try{
-    await fdb.runTransaction(async transaction=>{
-      const ref=fdb.collection('checkins').doc(CU.email);
-      const snap=await transaction.get(ref);
-      let list=[];
-      if(snap.exists){
-        const data=snap.data();
-        list=(Array.isArray(data.entries)?data.entries:[]).filter(e=>e&&e.date);
-      }
-      const idx=list.findIndex(c=>c.date===t);
-      if(idx>=0)list[idx]=entry;else list.push(entry);
-      transaction.set(ref,{entries:list});
-    });
+    const ref=fdb.collection('checkins').doc(CU.email);
+    // Build list from cache first (works offline); refresh from server when online
+    let list=[];
+    if(CACHE.checkins && Array.isArray(CACHE.checkins[CU.email])){
+      list=CACHE.checkins[CU.email].filter(e=>e&&e.date).map(e=>({...e}));
+    }
+    if(!offline){
+      try{
+        const snap=await ref.get();
+        if(snap.exists){
+          const data=snap.data();
+          list=(Array.isArray(data.entries)?data.entries:[]).filter(e=>e&&e.date);
+        }
+      }catch(e){ /* keep cache list */ }
+    }
+    const idx=list.findIndex(c=>c.date===t);
+    if(idx>=0)list[idx]=entry;else list.push(entry);
+    // IMPORTANT: plain set (not transaction) — transactions require internet
+    await ref.set({entries:list});
+    if(!CACHE.checkins)CACHE.checkins={};
+    CACHE.checkins[CU.email]=list;
+    if(offline) toast('💾 Check-in saved on this phone — will sync when online','g');
+    else toast('🔥 Check-in saved!','g');
+    renderDash(); renderHistory();
+  }catch(e){
+    console.error(e);
+    // Still keep local copy so the member doesn't lose the entry
     if(!CACHE.checkins)CACHE.checkins={};
     CACHE.checkins[CU.email]=CACHE.checkins[CU.email]||[];
     const localIdx=CACHE.checkins[CU.email].findIndex(c=>c.date===t);
     if(localIdx>=0)CACHE.checkins[CU.email][localIdx]=entry;
     else CACHE.checkins[CU.email].push(entry);
-    toast('🔥 Check-in saved!','g');
+    toast(offline?'💾 Saved on phone (sync when online)':'⚠️ Could not reach server — saved on this phone','a');
     renderDash(); renderHistory();
-  }catch(e){
-    console.error(e);
-    toast('⚠️ Could not save — check your connection','r');
   }
 }
 
@@ -1771,28 +1831,41 @@ async function saveWorkout(){
     }))
   }));
   const entry={id:wktBuilder.id||('w'+Date.now()),date:d,title,exercises};
+  const offline = (typeof navigator!=='undefined' && navigator.onLine===false);
   try{
-    await fdb.runTransaction(async transaction=>{
-      const ref=fdb.collection('workouts').doc(u.email);
-      const snap=await transaction.get(ref);
-      let list=[];
-      if(snap.exists){
-        const data=snap.data();
-        list=(Array.isArray(data.entries)?data.entries:[]).filter(e=>e&&e.date&&e.id);
-      }
-      const idx=list.findIndex(w=>w.id===entry.id);
-      if(idx>=0)list[idx]=entry;else list.push(entry);
-      transaction.set(ref,{entries:list});
-    });
-    // Refresh local cache from server to stay in sync
-    const fresh=await fdb.collection('workouts').doc(u.email).get();
-    if(fresh.exists) CACHE.workouts[u.email]=fresh.data().entries||[];
-    toast(wktBuilder.id?'🏋️ Workout updated!':'🏋️ Workout saved!','g');
+    const ref=fdb.collection('workouts').doc(u.email);
+    let list=[];
+    if(CACHE.workouts && Array.isArray(CACHE.workouts[u.email])){
+      list=CACHE.workouts[u.email].filter(e=>e&&e.date&&e.id).map(e=>({...e}));
+    }
+    if(!offline){
+      try{
+        const snap=await ref.get();
+        if(snap.exists){
+          const data=snap.data();
+          list=(Array.isArray(data.entries)?data.entries:[]).filter(e=>e&&e.date&&e.id);
+        }
+      }catch(e){}
+    }
+    const idx=list.findIndex(w=>w.id===entry.id);
+    if(idx>=0)list[idx]=entry;else list.push(entry);
+    // plain set — works offline; transactions do not
+    await ref.set({entries:list});
+    CACHE.workouts[u.email]=list;
+    if(offline) toast('💾 Workout saved on this phone — will sync when online','g');
+    else toast(wktBuilder.id?'🏋️ Workout updated!':'🏋️ Workout saved!','g');
     closeWorkoutLogger();
     renderWorkoutsScreen();
   }catch(e){
     console.error(e);
-    toast('⚠️ Could not save — check your connection','r');
+    if(!CACHE.workouts)CACHE.workouts={};
+    CACHE.workouts[u.email]=CACHE.workouts[u.email]||[];
+    const localIdx=CACHE.workouts[u.email].findIndex(w=>w.id===entry.id);
+    if(localIdx>=0)CACHE.workouts[u.email][localIdx]=entry;
+    else CACHE.workouts[u.email].push(entry);
+    toast(offline?'💾 Saved on phone (sync when online)':'⚠️ Could not reach server — saved on this phone','a');
+    closeWorkoutLogger();
+    renderWorkoutsScreen();
   }
 }
 
