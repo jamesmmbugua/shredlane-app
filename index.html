@@ -407,6 +407,22 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
 .wkt-from-prog .wfp-ttl{font-size:11px;font-weight:800;color:var(--grn);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
 .save-btn,.b-grn,button.approve-btn{min-height:44px}
 .tb{min-height:52px}
+#offlineBanner{display:none;position:fixed;top:0;left:0;right:0;z-index:10000;background:#C83232;color:#fff;text-align:center;padding:8px 12px;font-size:12px;font-weight:700}
+#offlineBanner.show{display:block}
+#pwaInstall{display:none;position:fixed;bottom:72px;left:12px;right:12px;z-index:900;background:var(--dark2);border:1px solid var(--grn);border-radius:14px;padding:12px 14px;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+#pwaInstall.show{display:flex;align-items:center;gap:12px;justify-content:space-between}
+#restTimer{display:none;position:fixed;bottom:80px;right:14px;z-index:950;background:var(--dark2);border:1px solid var(--grn);border-radius:16px;padding:12px 16px;min-width:120px;text-align:center;box-shadow:0 8px 28px rgba(0,0,0,.5)}
+#restTimer.show{display:block}
+#restTimer .rt-time{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--grn)}
+#restTimer .rt-btns{display:flex;gap:6px;margin-top:8px;justify-content:center}
+.inactive-badge{display:inline-block;background:rgba(255,59,48,.15);color:var(--red);font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;margin-left:6px}
+.wkt-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px}
+.wkt-cal-d{aspect-ratio:1;border-radius:8px;background:var(--dark2);border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--gry)}
+.wkt-cal-d.has{background:rgba(126,224,0,.15);border-color:rgba(126,224,0,.4);color:var(--grn);font-weight:700}
+.wkt-cal-d.today{outline:1px solid var(--grn)}
+.photo-compare{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.photo-compare img{width:100%;height:160px;object-fit:cover;border-radius:10px;border:1px solid var(--bdr)}
+.prev-perf{font-size:11px;color:var(--gry);margin:0 0 6px 2px}
 
 /* TOAST */
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--dark2);color:var(--wht);border:1px solid var(--bdr2);padding:10px 20px;border-radius:28px;font-size:13px;font-weight:600;opacity:0;transition:all .3s;white-space:nowrap;z-index:9999;pointer-events:none;box-shadow:0 8px 32px rgba(0,0,0,.6);}
@@ -419,6 +435,22 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
 </style>
 </head>
 <body>
+<div id="offlineBanner" role="status" aria-live="polite">📡 You’re offline — changes will sync when you’re back online</div>
+<div id="pwaInstall" role="dialog" aria-label="Install app">
+  <div style="font-size:13px;font-weight:700;color:var(--wht);flex:1">Install Shredlane on your home screen for faster daily check-ins</div>
+  <button class="b-grn" style="width:auto;padding:8px 14px;background:var(--grn);color:#000;border:none;border-radius:8px;font-weight:800;cursor:pointer" onclick="installPWA()">Install</button>
+  <button class="b-secondary" style="width:auto;padding:8px 10px;font-size:12px" onclick="dismissPWA()">✕</button>
+</div>
+<div id="restTimer" aria-live="polite">
+  <div style="font-size:10px;font-weight:800;color:var(--gry);letter-spacing:.08em;text-transform:uppercase">Rest</div>
+  <div class="rt-time" id="restTimerDisplay">1:30</div>
+  <div class="rt-btns">
+    <button class="b-secondary" style="padding:6px 10px;font-size:11px;width:auto" onclick="startRestTimer(60)">60s</button>
+    <button class="b-secondary" style="padding:6px 10px;font-size:11px;width:auto" onclick="startRestTimer(90)">90s</button>
+    <button class="b-secondary" style="padding:6px 10px;font-size:11px;width:auto" onclick="startRestTimer(120)">2m</button>
+    <button class="b-secondary" style="padding:6px 10px;font-size:11px;width:auto" onclick="stopRestTimer()">✕</button>
+  </div>
+</div>
 
 <!-- LANDING -->
 <div class="page active" id="page-landing">
@@ -744,6 +776,7 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <button class="b-secondary" style="width:auto;padding:10px 16px" onclick="exportMyPDF()">📄 Download Report Card (PDF)</button>
       <button class="b-secondary" style="width:auto;padding:10px 16px" onclick="exportMyCSV()">⬇️ Export my data (CSV)</button>
+      <button class="b-secondary" style="width:auto;padding:10px 16px;border-color:var(--grn);color:var(--grn)" onclick="shareProgressImage()">📲 Share progress image</button>
     </div>
     <div class="card" style="padding:0;overflow:hidden">
       <div style="overflow-x:auto">
@@ -777,6 +810,12 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
 
     <!-- Exercise progression charts -->
     <div id="exProgWrap" style="margin-top:16px"></div>
+
+    <!-- Training calendar -->
+    <div class="card" id="wktCalCard" style="margin-top:12px;display:none">
+      <div class="card-lbl">Training calendar (this month)</div>
+      <div class="wkt-cal" id="wktCalGrid"></div>
+    </div>
 
     <div class="scr-sub" style="margin-top:18px;margin-bottom:8px">Workout Log</div>
     <div id="wktHistList"></div>
@@ -883,6 +922,16 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
       </div>
     </div>
     <button class="save-btn" onclick="savePhotos()" style="margin-top:14px;">Save Photo Set</button>
+  </div>
+
+  <!-- Before / After compare -->
+  <div class="card" id="photoCompareCard" style="display:none;">
+    <div class="card-lbl">Before / After</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <select id="photoBeforeSel" class="fi fi-sel" style="flex:1;min-width:120px" onchange="renderPhotoCompare()"></select>
+      <select id="photoAfterSel" class="fi fi-sel" style="flex:1;min-width:120px" onchange="renderPhotoCompare()"></select>
+    </div>
+    <div class="photo-compare" id="photoCompareView"></div>
   </div>
 
   <!-- Gallery -->
@@ -1606,6 +1655,25 @@ function onWktDateChange(){
   wktBuilder.date=document.getElementById('wktDateIn').value||today();
 }
 
+function lastPerfForExercise(name){
+  if(!name||!name.trim())return null;
+  const n=name.trim().toLowerCase();
+  const list=[...myWorkouts()].sort((a,b)=>b.date.localeCompare(a.date));
+  for(const w of list){
+    if(wktBuilder&&wktBuilder.id&&w.id===wktBuilder.id)continue;
+    const ex=(w.exercises||[]).find(e=>(e.name||'').trim().toLowerCase()===n);
+    if(!ex||!(ex.sets||[]).length)continue;
+    const sets=ex.sets.filter(s=>s.weight!=null||s.reps!=null);
+    if(!sets.length)continue;
+    const best=sets.reduce((a,s)=>{
+      const wt=parseFloat(s.weight)||0;
+      return wt>=(a.wt||0)?{wt,reps:s.reps,weight:s.weight}:a;
+    },{wt:-1});
+    return {date:w.date,sets:sets.map(s=>(s.reps||'—')+'×'+(s.weight!=null?s.weight+'kg':'BW')).join('  '),best};
+  }
+  return null;
+}
+
 function renderExerciseBuilder(){
   const el=document.getElementById('exList');
   if(!el)return;
@@ -1613,24 +1681,31 @@ function renderExerciseBuilder(){
     el.innerHTML='<div style="font-size:12px;color:var(--gry);padding:8px 0 12px">No exercises yet — add one below</div>';
     return;
   }
-  el.innerHTML=wktBuilder.exercises.map((ex,ei)=>`
+  el.innerHTML=wktBuilder.exercises.map((ex,ei)=>{
+    const prev=lastPerfForExercise(ex.name);
+    return `
     <div class="ex-card">
       <div class="ex-hdr">
-        <input class="ex-name-in" placeholder="Exercise name (e.g. Bench Press)" value="${escAttr(ex.name)}" oninput="updateExName(${ei},this.value)">
-        <button class="ex-del" onclick="removeExercise(${ei})" title="Remove exercise">✕</button>
+        <input class="ex-name-in" placeholder="Exercise name (e.g. Bench Press)" value="${escAttr(ex.name)}" oninput="updateExName(${ei},this.value);renderExerciseBuilder()" aria-label="Exercise name">
+        <button class="ex-del" onclick="removeExercise(${ei})" title="Remove exercise" aria-label="Remove exercise">✕</button>
       </div>
+      ${prev?`<div class="prev-perf">Last (${prev.date.slice(5)}): ${escHtml(prev.sets)}</div>`:''}
       <div class="set-hdr-row">
         <div></div><div class="set-hdr-lbl">Reps</div><div class="set-hdr-lbl">Weight (kg)</div><div></div>
       </div>
       ${ex.sets.map((s,si)=>`
         <div class="set-row">
           <div class="set-n">${si+1}</div>
-          <input class="set-in" type="number" inputmode="numeric" placeholder="${s.hint?('target '+escAttr(s.hint)):'reps'}" value="${s.reps!==''&&s.reps!=null?s.reps:''}" oninput="updateSet(${ei},${si},'reps',this.value)">
-          <input class="set-in" type="number" inputmode="decimal" step="0.5" placeholder="kg" value="${s.weight!==''&&s.weight!=null?s.weight:''}" oninput="updateSet(${ei},${si},'weight',this.value)">
-          <button class="set-del" onclick="removeSet(${ei},${si})" title="Remove set">✕</button>
+          <input class="set-in" type="number" inputmode="numeric" placeholder="${s.hint?('target '+escAttr(s.hint)):'reps'}" value="${s.reps!==''&&s.reps!=null?s.reps:''}" oninput="updateSet(${ei},${si},'reps',this.value)" aria-label="Reps set ${si+1}">
+          <input class="set-in" type="number" inputmode="decimal" step="0.5" placeholder="kg" value="${s.weight!==''&&s.weight!=null?s.weight:''}" oninput="updateSet(${ei},${si},'weight',this.value)" aria-label="Weight set ${si+1}">
+          <button class="set-del" onclick="removeSet(${ei},${si});startRestTimer(90)" title="Remove set / start rest" aria-label="Remove set">✕</button>
         </div>`).join('')}
-      <button class="add-set-btn" onclick="addSet(${ei})">＋ Add Set</button>
-    </div>`).join('');
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <button class="add-set-btn" onclick="addSet(${ei});startRestTimer(90)">＋ Add Set · Rest 90s</button>
+        <button class="add-set-btn" style="color:var(--gry)" onclick="startRestTimer(90)">⏱ Rest only</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function escAttr(v){return (v==null?'':String(v)).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
@@ -1756,8 +1831,9 @@ function renderWorkoutsScreen(){
     }
   }
 
-  // Exercise progression charts
+  // Exercise progression charts + calendar
   renderExerciseProgression(list);
+  renderWorkoutCalendar(list);
 
   const hl=document.getElementById('wktHistList');
   if(!hl)return;
@@ -2331,7 +2407,27 @@ function renderDash(){
   }
 
   document.getElementById('totCI').textContent=ci.length;
-  document.getElementById('strN').textContent=calcStreak(ci);
+  const ciStreak=calcStreak(ci);
+  const wStreak=calcWorkoutStreak(wkts);
+  document.getElementById('strN').textContent=ciStreak;
+  // Show combined adherence under streak label if possible
+  const strL=document.querySelector('.str-l');
+  if(strL)strL.textContent=wStreak?(`Day streak · ${wStreak}d train`):'Day streak';
+  // Quick actions: reminders + message coach
+  let qa=document.getElementById('dashQuickActions');
+  if(!qa){
+    qa=document.createElement('div');
+    qa.id='dashQuickActions';
+    qa.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px';
+    const dashContent=document.getElementById('dashContent');
+    if(dashContent)dashContent.insertBefore(qa,dashContent.firstChild);
+  }
+  if(qa&&!VIEWUSER){
+    qa.innerHTML=`
+      <button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="enableReminders()">🔔 Reminders</button>
+      <button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="messageCoach('Hi coach, quick question from Shredlane')">💬 Message coach</button>
+      <button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px;border-color:var(--grn);color:var(--grn)" onclick="shareProgressImage()">📲 Share progress</button>`;
+  } else if(qa&&VIEWUSER){qa.innerHTML='';}
   if(!ci.length){renderSpeedo(0);renderTrend();const pc0=document.getElementById('progCard');if(pc0)pc0.style.display='none';return;}
   const last=ci[ci.length-1],prev=ci.length>1?ci[ci.length-2]:null;
   setMet('mW','mWT',last.weight,'kg',prev?.weight,true);
@@ -2490,11 +2586,27 @@ const renderAdmin = requireAdmin(function renderAdmin(){
   const avgWt=allCI.filter(c=>c&&c.weight).length
     ?(allCI.reduce((s,c)=>s+(c.weight||0),0)/allCI.filter(c=>c&&c.weight).length).toFixed(1):'—';
 
+  // Weekly coach summary
+  const weekAgo=new Date();weekAgo.setDate(weekAgo.getDate()-7);
+  const weekStr=weekAgo.toISOString().slice(0,10);
+  const ciThisWeek=allCI.filter(c=>c.date>=weekStr).length;
+  let wktThisWeek=0,inactive=0;
+  approved.forEach(u=>{
+    const wk=Array.isArray(d.workouts[u.email])?d.workouts[u.email]:[];
+    wktThisWeek+=wk.filter(w=>w.date>=weekStr).length;
+    const lastCi=(Array.isArray(d.checkins[u.email])?d.checkins[u.email]:[]).reduce((a,b)=>!a||b.date>a.date?b:a,null);
+    const lastW=wk.reduce((a,b)=>!a||b.date>a.date?b:a,null);
+    const lastAct=lastCi&&lastW?(lastCi.date>lastW.date?lastCi.date:lastW.date):(lastCi?lastCi.date:lastW?lastW.date:null);
+    if(!lastAct||lastAct<weekStr)inactive++;
+  });
+
   document.getElementById('commGrid').innerHTML=`
     <div class="cm"><div class="cmv">${allMembers.length}</div><div class="cml">Total Members</div></div>
     <div class="cm"><div class="cmv">${approved.length}</div><div class="cml">Approved</div></div>
     <div class="cm"><div class="cmv" style="color:${pending.length?'var(--amb)':'var(--grn)'}">${pending.length}</div><div class="cml">Pending</div></div>
-    <div class="cm"><div class="cmv">${allCI.length}</div><div class="cml">Total Check-ins</div></div>
+    <div class="cm"><div class="cmv">${ciThisWeek}</div><div class="cml">Check-ins (7d)</div></div>
+    <div class="cm"><div class="cmv">${wktThisWeek}</div><div class="cml">Workouts (7d)</div></div>
+    <div class="cm"><div class="cmv" style="color:${inactive?'var(--red)':'var(--grn)'}">${inactive}</div><div class="cml">Inactive 7d+</div></div>
     <div class="cm"><div class="cmv">${allCI.filter(c=>(c.steps||0)>=10000).length}</div><div class="cml">10K Days</div></div>
     <div class="cm"><div class="cmv">${avgWt}</div><div class="cml">Avg Wt kg</div></div>`;
 
@@ -2514,14 +2626,20 @@ const renderAdmin = requireAdmin(function renderAdmin(){
       const wDiff=last&&u.baseWeight!=null?(last.weight-u.baseWeight).toFixed(1):null;
       const waDiff=last&&u.baseWaist!=null?(last.waist-u.baseWaist).toFixed(1):null;
       const progOptions=allPrograms().map(p=>`<option value="${p.id}" ${u.programId===p.id?'selected':''}>${escHtml(p.name)}</option>`).join('');
+      const wkRaw=Array.isArray(d.workouts[u.email])?d.workouts[u.email]:[];
+      const lastCi=ci.length?ci.reduce((a,b)=>a.date>b.date?a:b):null;
+      const lastW=wkRaw.length?wkRaw.reduce((a,b)=>a.date>b.date?a:b):null;
+      const lastAct=lastCi&&lastW?(lastCi.date>=lastW.date?lastCi.date:lastW.date):(lastCi?lastCi.date:lastW?lastW.date:null);
+      const weekAgoStr=(function(){const x=new Date();x.setDate(x.getDate()-7);return x.toISOString().slice(0,10);})();
+      const isInactive=!isPend&&(!lastAct||lastAct<weekAgoStr);
       return `<div class="mc">
         <div class="mc-top">
           <div class="mc-av" style="background:${col}">${escHtml(u.name).charAt(0).toUpperCase()}</div>
           <div style="flex:1">
-            <div class="mc-nm">${escHtml(u.name)}</div>
+            <div class="mc-nm">${escHtml(u.name)}${isInactive?'<span class="inactive-badge">INACTIVE 7d+</span>':''}</div>
             <div class="mc-em">${escHtml(u.email)} · ${escHtml(u.goal)||'—'}</div>
             ${u.baseWeight!=null?`<div class="mc-em" style="color:var(--grn3)">Baseline: ${u.baseWeight}kg · ${u.baseWaist}in</div>`:''}
-            <div class="mc-em" style="color:var(--gry)">Joined ${escHtml(u.joined)||'—'}</div>
+            <div class="mc-em" style="color:var(--gry)">Joined ${escHtml(u.joined)||'—'}${lastAct?' · Last active '+lastAct:''}</div>
           </div>
           <span class="bdg ${isPend?'bdg-pend':ci.length?'bdg-on':'bdg-off'}">${isPend?'Pending':ci.length?'Active':'Approved'}</span>
         </div>
@@ -3058,6 +3176,205 @@ function exportUserCSV(email){
   toast('⬇️ CSV exported for '+u.name,'g');
 }
 
+// ═══════════════════════════════════════
+// CLIENT UX PACK — reminders, rest timer, PWA, offline, share, etc.
+// ═══════════════════════════════════════
+let _restInterval=null,_restLeft=0;
+function startRestTimer(secs){
+  secs=secs||90;
+  _restLeft=secs;
+  const box=document.getElementById('restTimer');
+  const disp=document.getElementById('restTimerDisplay');
+  if(box)box.classList.add('show');
+  function tick(){
+    const m=Math.floor(_restLeft/60),s=_restLeft%60;
+    if(disp)disp.textContent=m+':'+String(s).padStart(2,'0');
+    if(_restLeft<=0){
+      stopRestTimer();
+      try{if(navigator.vibrate)navigator.vibrate([200,100,200]);}catch(e){}
+      toast('⏱ Rest done — next set!','g');
+      return;
+    }
+    _restLeft--;
+  }
+  clearInterval(_restInterval);
+  tick();
+  _restInterval=setInterval(tick,1000);
+}
+function stopRestTimer(){
+  clearInterval(_restInterval);_restInterval=null;
+  const box=document.getElementById('restTimer');
+  if(box)box.classList.remove('show');
+}
+
+// Offline banner
+window.addEventListener('online',()=>{const b=document.getElementById('offlineBanner');if(b)b.classList.remove('show');toast('Back online','g');});
+window.addEventListener('offline',()=>{const b=document.getElementById('offlineBanner');if(b)b.classList.add('show');});
+if(typeof navigator!=='undefined'&&navigator.onLine===false){const b=document.getElementById('offlineBanner');if(b)b.classList.add('show');}
+
+// PWA install
+let _deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault();_deferredPrompt=e;
+  if(localStorage.getItem('pwaDismissed')==='1')return;
+  const el=document.getElementById('pwaInstall');if(el)el.classList.add('show');
+});
+function installPWA(){
+  if(!_deferredPrompt){toast('Use your browser menu → Add to Home Screen','a');return;}
+  _deferredPrompt.prompt();
+  _deferredPrompt.userChoice.then(()=>{_deferredPrompt=null;dismissPWA();});
+}
+function dismissPWA(){
+  const el=document.getElementById('pwaInstall');if(el)el.classList.remove('show');
+  try{localStorage.setItem('pwaDismissed','1');}catch(e){}
+}
+
+// Daily check-in reminder (browser Notification)
+function setupReminders(){
+  if(!('Notification' in window))return;
+  const key='shredlane_remind_'+today();
+  if(localStorage.getItem(key))return;
+  if(Notification.permission==='default'){
+    // soft ask once per session via toast action isn't available — request on first dashboard
+  }
+  if(Notification.permission==='granted'){
+    const h=new Date().getHours();
+    // gentle evening nudge if no check-in today
+    if(h>=18){
+      const ci=myCI();
+      if(!ci.some(c=>c.date===today())){
+        try{
+          new Notification('Shredlane',{body:'Don’t forget today’s check-in 💪',icon:undefined});
+          localStorage.setItem(key,'1');
+        }catch(e){}
+      }
+    }
+  }
+}
+function enableReminders(){
+  if(!('Notification' in window)){toast('Notifications not supported on this device','a');return;}
+  Notification.requestPermission().then(p=>{
+    if(p==='granted'){toast('🔔 Reminders enabled','g');setupReminders();}
+    else toast('Notifications blocked — enable in browser settings','a');
+  });
+}
+
+// WhatsApp coach link
+function messageCoach(text){
+  const msg=encodeURIComponent(text||'Hi coach — quick update from Shredlane');
+  window.open('https://wa.me/254705671119?text='+msg,'_blank');
+}
+
+// Share progress image
+function shareProgressImage(){
+  const u=VIEWUSER||CU;if(!u)return;
+  const ci=myCI().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const last=ci[ci.length-1];
+  const canvas=document.createElement('canvas');
+  canvas.width=720;canvas.height=900;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#0e0e0e';ctx.fillRect(0,0,720,900);
+  ctx.fillStyle='#7EE000';ctx.font='bold 36px Barlow Condensed,sans-serif';
+  ctx.fillText('SHREDLANE',40,60);
+  ctx.fillStyle='#fff';ctx.font='bold 42px Barlow Condensed,sans-serif';
+  ctx.fillText(u.name.split(' ')[0],40,120);
+  ctx.fillStyle='#888';ctx.font='22px Barlow,sans-serif';
+  ctx.fillText(today(),40,155);
+  let y=220;
+  const lines=[];
+  if(u.baseWeight&&last)lines.push(['Weight',u.baseWeight+' → '+(last.weight??'—')+' kg']);
+  if(u.baseWaist&&last)lines.push(['Waist',u.baseWaist+' → '+(last.waist??'—')+' in']);
+  lines.push(['Streak',calcStreak(ci)+' days']);
+  lines.push(['Check-ins',String(ci.length)]);
+  const wkts=myWorkouts();
+  lines.push(['Workouts',String(wkts.length)]);
+  const st=myAssignedProgramState();
+  if(st.prog)lines.push(['Program',st.prog.name]);
+  lines.forEach(([k,v])=>{
+    ctx.fillStyle='#666';ctx.font='20px Barlow,sans-serif';ctx.fillText(k,40,y);
+    ctx.fillStyle='#fff';ctx.font='bold 28px Barlow Condensed,sans-serif';ctx.fillText(String(v),280,y);
+    y+=56;
+  });
+  ctx.fillStyle='#7EE000';ctx.font='18px Barlow,sans-serif';
+  ctx.fillText('shredlane · consistency compounds',40,860);
+  canvas.toBlob(blob=>{
+    if(!blob)return;
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='shredlane-progress-'+today()+'.png';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('📲 Progress image saved — share anywhere','g');
+  },'image/png');
+}
+
+// Workout calendar
+function renderWorkoutCalendar(workouts){
+  const card=document.getElementById('wktCalCard');
+  const grid=document.getElementById('wktCalGrid');
+  if(!card||!grid)return;
+  const dates=new Set((workouts||[]).map(w=>w.date));
+  if(!dates.size){card.style.display='none';return;}
+  card.style.display='block';
+  const now=new Date();
+  const y=now.getFullYear(),m=now.getMonth();
+  const first=new Date(y,m,1);
+  const startPad=first.getDay(); // 0 Sun
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const t=today();
+  let html='';
+  ['S','M','T','W','T','F','S'].forEach(d=>{html+=`<div class="wkt-cal-d" style="border:none;background:none;color:var(--gry2);font-weight:800">${d}</div>`;});
+  for(let i=0;i<startPad;i++)html+=`<div class="wkt-cal-d" style="opacity:.3"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const has=dates.has(ds);
+    html+=`<div class="wkt-cal-d${has?' has':''}${ds===t?' today':''}" title="${ds}">${d}</div>`;
+  }
+  grid.innerHTML=html;
+}
+
+// Photo before/after
+function renderPhotoCompare(){
+  const email=VIEWUSER?VIEWUSER.email:CU.email;
+  const raw=gDB().photos[email];
+  const list=(Array.isArray(raw)?raw:[]).filter(e=>e&&e.date).sort((a,b)=>a.date.localeCompare(b.date));
+  const card=document.getElementById('photoCompareCard');
+  const beforeSel=document.getElementById('photoBeforeSel');
+  const afterSel=document.getElementById('photoAfterSel');
+  const view=document.getElementById('photoCompareView');
+  if(!card||!beforeSel||!afterSel||!view)return;
+  if(list.length<2){card.style.display='none';return;}
+  card.style.display='block';
+  if(!beforeSel.options.length||beforeSel.dataset.filled!==String(list.length)){
+    beforeSel.innerHTML=list.map(e=>`<option value="${e.date}">${e.date}</option>`).join('');
+    afterSel.innerHTML=list.map(e=>`<option value="${e.date}">${e.date}</option>`).join('');
+    beforeSel.value=list[0].date;
+    afterSel.value=list[list.length-1].date;
+    beforeSel.dataset.filled=String(list.length);
+  }
+  const b=list.find(e=>e.date===beforeSel.value)||list[0];
+  const a=list.find(e=>e.date===afterSel.value)||list[list.length-1];
+  const side='front';
+  const bUrl=b[side]||b.side||b.back;
+  const aUrl=a[side]||a.side||a.back;
+  view.innerHTML=`
+    <div><div style="font-size:11px;color:var(--gry);margin-bottom:4px">Before · ${b.date}</div>${bUrl?`<img src="${bUrl}" alt="Before">`:'<div style="color:var(--gry);padding:40px 0;text-align:center">No photo</div>'}</div>
+    <div><div style="font-size:11px;color:var(--gry);margin-bottom:4px">After · ${a.date}</div>${aUrl?`<img src="${aUrl}" alt="After">`:'<div style="color:var(--gry);padding:40px 0;text-align:center">No photo</div>'}</div>`;
+}
+
+// Workout streak (consecutive days with a logged workout)
+function calcWorkoutStreak(workouts){
+  if(!workouts||!workouts.length)return 0;
+  const days=new Set(workouts.map(w=>w.date));
+  let s=0;const c=new Date();
+  for(;;){
+    const d=c.toISOString().slice(0,10);
+    if(days.has(d)){s++;c.setDate(c.getDate()-1);}
+    else break;
+  }
+  return s;
+}
+
 // TOAST
 // ═══════════════════════════════════════
 function toast(msg,type=''){
@@ -3070,6 +3387,8 @@ function toast(msg,type=''){
 onHu(5);renderSpeedo(0);
 const nd=new Date();
 // ciDate element replaced by dpDisplay — handled in initCI()
+try{setupReminders();}catch(e){}
+
 
 // ═══════════════════════════════════════
 // CONFIG — paste your Cloudinary details here
@@ -3198,6 +3517,7 @@ function renderPhotos(){
   const email = VIEWUSER ? VIEWUSER.email : CU.email;
   const raw = gDB().photos[email];
   const list = (Array.isArray(raw)?raw:[]).filter(e=>e&&e.date).sort((a,b)=>b.date.localeCompare(a.date));
+  renderPhotoCompare();
   if(!list.length){ card.style.display='none'; return; }
   card.style.display='block';
 
@@ -3207,14 +3527,14 @@ function renderPhotos(){
       return `<div style="flex:1;min-width:80px;">
         <div style="font-size:9px;font-weight:700;color:var(--gry);text-transform:uppercase;margin-bottom:4px;">${t}</div>
         <a href="${entry[t]}" target="_blank" style="display:block;border-radius:8px;overflow:hidden;border:1px solid var(--bdr);">
-          <img src="${entry[t]}" style="width:100%;height:110px;object-fit:cover;display:block;">
+          <img src="${entry[t]}" style="width:100%;height:110px;object-fit:cover;display:block;" alt="${t} photo ${entry.date}">
         </a>
       </div>`;
     }).join('');
     return `<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--bdr);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--grn);">${fmtDate(entry.date)}</div>
-        ${!VIEWUSER ? `<button class="b-lgt" style="padding:4px 10px;font-size:11px;" onclick="deletePhotoSet('${entry.date}')">🗑 Delete</button>` : ''}
+        ${!VIEWUSER ? `<button class="b-lgt" style="padding:4px 10px;font-size:11px;" onclick="deletePhotoSet('${entry.date}')" aria-label="Delete photo set">🗑 Delete</button>` : ''}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">${thumbs}</div>
     </div>`;
