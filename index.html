@@ -387,6 +387,26 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
 .prog-ex-mini-tgt{font-family:'DM Mono',monospace;color:var(--gry)}
 .assigned-badge{display:inline-block;background:var(--grn);color:#000;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:12px}
 .prog-select-sm{padding:6px 8px;background:var(--dark2);border:1px solid var(--bdr2);border-radius:7px;color:var(--txt);font-family:'Barlow',sans-serif;font-size:11px}
+.dash-prog-card{background:linear-gradient(135deg,rgba(126,224,0,.08),var(--dark));border:1px solid rgba(126,224,0,.35);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.dash-prog-card .dpc-ttl{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--grn);margin-bottom:6px}
+.dash-prog-card .dpc-nm{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--wht);margin-bottom:4px}
+.dash-prog-card .dpc-desc{font-size:12px;color:var(--gry);margin-bottom:10px;line-height:1.5}
+.coach-note-card{background:rgba(255,184,0,.08);border:1px solid rgba(255,184,0,.3);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.coach-note-card .cn-ttl{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--amb);margin-bottom:4px}
+.coach-note-card .cn-body{font-size:13px;color:var(--txt);line-height:1.55}
+.onboard-card{background:var(--dark);border:1px solid var(--bdr2);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.onboard-card .ob-ttl{font-size:13px;font-weight:800;color:var(--wht);margin-bottom:10px}
+.onboard-card .ob-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--bdr);font-size:13px;color:var(--txt)}
+.onboard-card .ob-item:first-of-type{border-top:none}
+.onboard-card .ob-done{color:var(--grn);text-decoration:line-through;opacity:.7}
+.ex-prog-card{background:var(--dark);border:1px solid var(--bdr);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.ex-prog-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.ex-prog-tab{padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;background:var(--dark2);border:1px solid var(--bdr2);color:var(--gry);cursor:pointer}
+.ex-prog-tab.active{background:var(--grn);color:#000;border-color:var(--grn)}
+.wkt-from-prog{background:var(--dark2);border:1px dashed rgba(126,224,0,.35);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+.wkt-from-prog .wfp-ttl{font-size:11px;font-weight:800;color:var(--grn);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.save-btn,.b-grn,button.approve-btn{min-height:44px}
+.tb{min-height:52px}
 
 /* TOAST */
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--dark2);color:var(--wht);border:1px solid var(--bdr2);padding:10px 20px;border-radius:28px;font-size:13px;font-weight:600;opacity:0;transition:all .3s;white-space:nowrap;z-index:9999;pointer-events:none;box-shadow:0 8px 32px rgba(0,0,0,.6);}
@@ -553,6 +573,15 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
     </div>
 
     <div id="dashContent">
+      <!-- Onboarding checklist (new members) -->
+      <div id="onboardWrap" style="display:none"></div>
+
+      <!-- Coach note -->
+      <div id="coachNoteWrap" style="display:none"></div>
+
+      <!-- Assigned program card -->
+      <div id="dashProgWrap" style="display:none"></div>
+
       <div class="str-card">
         <div class="str-f">🔥</div>
         <div><div class="str-n" id="strN">0</div><div class="str-l">Day streak</div></div>
@@ -727,10 +756,13 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
   <!-- WORKOUTS -->
   <div class="scr" id="scr-workouts">
     <div class="scr-ttl">WORKOUTS</div>
-    <div class="scr-sub">Log exercises with sets, reps & weight</div>
+    <div class="scr-sub">Log sessions · track sets, reps & weight</div>
     <div id="viewAsBannerWorkouts" style="display:none;background:var(--grn-dim);border:1px solid rgba(126,224,0,.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700;color:var(--grn)"></div>
 
     <div class="wkt-stats-row" id="wktStatsRow"></div>
+
+    <!-- Start from assigned program -->
+    <div id="wktFromProgWrap"></div>
 
     <div class="card">
       <div class="wkt-hdr-row">
@@ -743,6 +775,9 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
       <div style="text-align:center;margin-top:8px" id="cancelEditWrap"></div>
     </div>
 
+    <!-- Exercise progression charts -->
+    <div id="exProgWrap" style="margin-top:16px"></div>
+
     <div class="scr-sub" style="margin-top:18px;margin-bottom:8px">Workout Log</div>
     <div id="wktHistList"></div>
   </div>
@@ -750,7 +785,7 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
   <!-- PROGRAM -->
   <div class="scr" id="scr-program">
     <div class="scr-ttl">PROGRAM</div>
-    <div class="scr-sub">Your training plan</div>
+    <div class="scr-sub">Your plan from the coach</div>
     <div id="viewAsBannerProgram" style="display:none;background:var(--grn-dim);border:1px solid rgba(126,224,0,.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700;color:var(--grn)">👁️ Coach view — assigning/browsing on this member's behalf</div>
     <div id="myProgramWrap"></div>
     <div class="scr-sub" style="margin-top:18px;margin-bottom:8px" id="browseProgHdr">Available Programs</div>
@@ -973,13 +1008,24 @@ function isAdmin(){return CU && CU.role==='admin';}
 function today(){return new Date().toISOString().slice(0,10)}
   function findDemoForExercise(name){if(!name||!CACHE.demos)return null;const n=name.toLowerCase().trim();return Object.values(CACHE.demos).find(d=>d.name&&d.name.toLowerCase().trim()===n)||null;}
 
+let _lastKnownProgramId = null;
 function onDataUpdate(){
-  // Keep the logged-in user's record fresh (so approval status updates live)
+  // Keep the logged-in user's record fresh (so approval status / program assignment stay live)
   if(CU && CACHE.users[CU.email]){
     const wasPending = CU.status==='pending';
+    const prevProgId = CU.programId || null;
     CU = CACHE.users[CU.email];
     if(wasPending && CU.status==='approved'){
       toast('🎉 Your account has been approved!','g');
+    }
+    // Notify member when coach assigns or changes their program
+    if(!VIEWUSER && CU.role!=='admin'){
+      const newProgId = CU.programId || null;
+      if(newProgId && newProgId!==prevProgId && newProgId!==_lastKnownProgramId){
+        const pname=(CACHE.programs[newProgId]&&CACHE.programs[newProgId].name)||'a new program';
+        toast('📋 Coach assigned: '+pname,'g');
+      }
+      _lastKnownProgramId = newProgId;
     }
     document.getElementById('adminTab').style.display=CU.role==='admin'?'flex':'none';
   }
@@ -990,7 +1036,7 @@ function onDataUpdate(){
   if(activeScr.id==='scr-history') renderHistory();
   if(activeScr.id==='scr-workouts') renderWorkoutsScreen();
   if(activeScr.id==='scr-program') renderProgramScreen();
-    if(activeScr.id==='scr-photos') renderPhotos();
+  if(activeScr.id==='scr-photos') renderPhotos();
   if(activeScr.id==='scr-library') renderLibrary();
 }
 
@@ -1177,6 +1223,7 @@ async function doRegister(){
 
 function onSuccess(user){
   CU=user;
+  _lastKnownProgramId = user.programId || null; // avoid false "program assigned" toast on login
   closeAuth();
   document.getElementById('page-landing').classList.remove('active');
   document.getElementById('page-app').classList.add('active');
@@ -1678,7 +1725,7 @@ function renderWorkoutsScreen(){
   // Stats row
   const stEl=document.getElementById('wktStatsRow');
   if(stEl){
-    const totalSets=list.reduce((s,w)=>s+w.exercises.reduce((s2,ex)=>s2+ex.sets.length,0),0);
+    const totalSets=list.reduce((s,w)=>s+w.exercises.reduce((s2,ex)=>s2+(ex.sets||[]).length,0),0);
     const last30=list.filter(w=>{const dd=(new Date()-new Date(w.date+'T00:00:00'))/86400000;return dd<=30;}).length;
     stEl.innerHTML=`
       <div class="met" style="padding:12px"><div class="met-lbl">Total Workouts</div><div class="met-val" style="font-size:24px">${list.length}</div></div>
@@ -1686,15 +1733,41 @@ function renderWorkoutsScreen(){
       <div class="met" style="padding:12px"><div class="met-lbl">Total Sets</div><div class="met-val" style="font-size:24px">${totalSets}</div></div>`;
   }
 
+  // Start from assigned program
+  const fp=document.getElementById('wktFromProgWrap');
+  if(fp){
+    const st=myAssignedProgramState();
+    if(st.state==='ready' && st.prog && (st.prog.days||[]).length){
+      const days=st.prog.days;
+      fp.innerHTML=`<div class="wkt-from-prog">
+        <div class="wfp-ttl">📋 From your program: ${escHtml(st.prog.name)}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${days.map(d=>`<button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="startWorkoutFromProgramDay('${st.prog.id}','${d.id}')">▶ ${escHtml(d.name)}</button>`).join('')}
+        </div>
+      </div>`;
+    } else if(st.state==='none'){
+      fp.innerHTML=`<div class="wkt-from-prog" style="border-style:solid;border-color:var(--bdr)">
+        <div class="wfp-ttl" style="color:var(--gry)">No program assigned</div>
+        <div style="font-size:12px;color:var(--gry);margin-bottom:8px">Open the Program tab to see your plan, or log a free workout below.</div>
+        <button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="goTab('program',document.getElementById('tbProgram'))">Go to Program</button>
+      </div>`;
+    } else {
+      fp.innerHTML='';
+    }
+  }
+
+  // Exercise progression charts
+  renderExerciseProgression(list);
+
   const hl=document.getElementById('wktHistList');
   if(!hl)return;
   if(!list.length){
-    hl.innerHTML='<div class="card wkt-empty">🏋️ No workouts logged yet — add exercises above to start tracking.</div>';
+    hl.innerHTML='<div class="card wkt-empty">🏋️ No workouts logged yet.<br><span style="font-size:12px;opacity:.8">Tip: open your Program and tap <strong>▶ Log this day</strong> to pre-fill exercises, or add them manually above.</span></div>';
     return;
   }
   hl.innerHTML=list.map(w=>{
     const dstr=new Date(w.date+'T00:00:00').toLocaleDateString('en-KE',{weekday:'short',day:'2-digit',month:'short'});
-    const setCount=w.exercises.reduce((s,ex)=>s+ex.sets.length,0);
+    const setCount=w.exercises.reduce((s,ex)=>s+(ex.sets||[]).length,0);
     return `<div class="wkt-log-card">
       <div class="wkt-log-top">
         <div>
@@ -1707,9 +1780,105 @@ function renderWorkoutsScreen(){
           <button class="wkt-icn-btn" onclick="deleteWorkout('${w.id}')" title="Delete">🗑️</button>
         </div>
       </div>
-      ${w.exercises.map(ex=>`<div class="wkt-ex-row"><span class="wkt-ex-nm">${escHtml(ex.name)}</span><span class="wkt-ex-sets">${ex.sets.map(s=>(s.reps||'—')+'×'+(s.weight!=null?s.weight+'kg':'BW')).join('  ')}</span></div>`).join('')}
+      ${w.exercises.map(ex=>`<div class="wkt-ex-row"><span class="wkt-ex-nm">${escHtml(ex.name)}</span><span class="wkt-ex-sets">${(ex.sets||[]).map(s=>(s.reps||'—')+'×'+(s.weight!=null?s.weight+'kg':'BW')).join('  ')}</span></div>`).join('')}
     </div>`;
   }).join('');
+}
+
+// ── Exercise progression (max weight over time for top exercises) ──
+let _exProgSelected=null;
+function getExerciseHistory(workouts){
+  const map={}; // name -> [{date, maxWeight, volume}]
+  workouts.forEach(w=>{
+    (w.exercises||[]).forEach(ex=>{
+      const name=(ex.name||'').trim();
+      if(!name)return;
+      const sets=ex.sets||[];
+      const weights=sets.map(s=>parseFloat(s.weight)).filter(v=>!isNaN(v)&&v>0);
+      const maxW=weights.length?Math.max(...weights):null;
+      if(maxW==null)return;
+      const vol=sets.reduce((s,set)=>{
+        const r=parseFloat(set.reps)||0, wt=parseFloat(set.weight)||0;
+        return s+r*wt;
+      },0);
+      if(!map[name])map[name]=[];
+      map[name].push({date:w.date,maxWeight:maxW,volume:vol});
+    });
+  });
+  // Sort each series by date and keep last point per day
+  Object.keys(map).forEach(k=>{
+    const byDate={};
+    map[k].forEach(p=>{byDate[p.date]=p;});
+    map[k]=Object.values(byDate).sort((a,b)=>a.date.localeCompare(b.date));
+  });
+  return map;
+}
+function renderExerciseProgression(workouts){
+  const wrap=document.getElementById('exProgWrap');
+  if(!wrap)return;
+  const hist=getExerciseHistory(workouts||myWorkouts());
+  // Top exercises by number of logged sessions (need at least 2 points)
+  const ranked=Object.entries(hist)
+    .filter(([,pts])=>pts.length>=2)
+    .sort((a,b)=>b[1].length-a[1].length)
+    .slice(0,6);
+  if(!ranked.length){
+    wrap.innerHTML='';
+    return;
+  }
+  if(!_exProgSelected || !hist[_exProgSelected]) _exProgSelected=ranked[0][0];
+  const pts=hist[_exProgSelected]||[];
+  // Store names for safe selection by index
+  window._exProgNames=ranked.map(([n])=>n);
+  wrap.innerHTML=`<div class="ex-prog-card">
+    <div class="card-lbl">📈 Exercise progression (max weight)</div>
+    <div class="ex-prog-tabs">
+      ${ranked.map(([name],i)=>`<button class="ex-prog-tab ${_exProgSelected===name?'active':''}" onclick="selectExProg(${i})">${escHtml(name)}</button>`).join('')}
+    </div>
+    <div class="chart-area"><svg class="chart-svg" id="exProgSVG" viewBox="0 0 300 140" preserveAspectRatio="none"></svg></div>
+    <div style="font-size:11px;color:var(--gry);margin-top:6px" id="exProgCaption"></div>
+  </div>`;
+  drawExProgChart(pts, _exProgSelected);
+}
+function selectExProg(i){
+  if(window._exProgNames && window._exProgNames[i]!=null){
+    _exProgSelected=window._exProgNames[i];
+    renderExerciseProgression();
+  }
+}
+function drawExProgChart(pts, name){
+  const svg=document.getElementById('exProgSVG');
+  const cap=document.getElementById('exProgCaption');
+  if(!svg||!pts||pts.length<2){
+    if(svg)svg.innerHTML='<text x="150" y="70" text-anchor="middle" font-family="Barlow" font-size="11" fill="#555">Need at least 2 sessions</text>';
+    return;
+  }
+  const vals=pts.map(p=>p.maxWeight);
+  let lo=Math.min(...vals), hi=Math.max(...vals);
+  const pad=(hi-lo)*0.15||1;
+  lo=Math.max(0,lo-pad); hi=hi+pad;
+  const range=hi-lo||1;
+  const W=300,H=140,pl=8,pr=8,pt=12,pb=20;
+  const pw=W-pl-pr, ph=H-pt-pb;
+  const tx=i=>pl+(i/(pts.length-1))*pw;
+  const ty=v=>pt+ph*(1-(v-lo)/range);
+  let path='';
+  pts.forEach((p,i)=>{path+=(i?'L':'M')+tx(i).toFixed(1)+','+ty(p.maxWeight).toFixed(1);});
+  const first=pts[0].maxWeight, last=pts[pts.length-1].maxWeight;
+  const delta=last-first;
+  const dots=pts.map((p,i)=>`<circle cx="${tx(i).toFixed(1)}" cy="${ty(p.maxWeight).toFixed(1)}" r="3" fill="#7EE000"/>`).join('');
+  svg.innerHTML=`
+    <polyline fill="none" stroke="rgba(126,224,0,.25)" stroke-width="6" points="${pts.map((p,i)=>tx(i).toFixed(1)+','+ty(p.maxWeight).toFixed(1)).join(' ')}"/>
+    <path d="${path}" fill="none" stroke="#7EE000" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}
+    <text x="${tx(0)}" y="${H-4}" text-anchor="start" font-size="9" fill="#666" font-family="Barlow">${pts[0].date.slice(5)}</text>
+    <text x="${tx(pts.length-1)}" y="${H-4}" text-anchor="end" font-size="9" fill="#666" font-family="Barlow">${pts[pts.length-1].date.slice(5)}</text>
+  `;
+  if(cap){
+    const arrow=delta>0?'▲':delta<0?'▼':'→';
+    const clr=delta>=0?'var(--grn)':'var(--red)';
+    cap.innerHTML=`${escHtml(name)}: <strong style="color:${clr}">${arrow} ${Math.abs(delta).toFixed(1)} kg</strong> over ${pts.length} sessions · latest <strong>${last.toFixed(1)} kg</strong>`;
+  }
 }
 
 function escHtml(v){return (v==null?'':String(v)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
@@ -1718,7 +1887,20 @@ function escHtml(v){return (v==null?'':String(v)).replace(/&/g,'&amp;').replace(
 // PROGRAMS — client browse/assign/log, admin builder
 // ═══════════════════════════════════════
 function allPrograms(){return Object.values(gDB().programs||{}).sort((a,b)=>(a.name||'').localeCompare(b.name||''))}
-function myAssignedProgram(){const u=VIEWUSER||CU;if(!u||!u.programId)return null;return gDB().programs[u.programId]||null}
+function myAssignedProgram(){
+  const u=VIEWUSER||CU;
+  if(!u||!u.programId)return null;
+  return gDB().programs[u.programId]||null;
+}
+/** Returns 'loading' | 'missing' | program object */
+function myAssignedProgramState(){
+  const u=VIEWUSER||CU;
+  if(!u||!u.programId)return {state:'none',prog:null};
+  const prog=gDB().programs[u.programId];
+  if(prog)return {state:'ready',prog};
+  if(!programsReady)return {state:'loading',prog:null};
+  return {state:'missing',prog:null};
+}
 
 async function assignProgramToUser(email,programId){
   try{
@@ -1728,6 +1910,18 @@ async function assignProgramToUser(email,programId){
     renderProgramScreen();
     renderAdmin();
   }catch(e){console.error(e);toast('⚠️ Could not update — check connection','r');}
+}
+
+async function saveCoachNote(email){
+  if(!CU||CU.role!=='admin'){toast('Admin only','r');return;}
+  const id='cn-'+email.replace(/[^a-zA-Z0-9]/g,'_');
+  const el=document.getElementById(id);
+  const note=el?(el.value||'').trim():'';
+  try{
+    await fdb.collection('users').doc(email).set({coachNote:note||null},{merge:true});
+    if(CACHE.users[email])CACHE.users[email].coachNote=note||null;
+    toast(note?'💬 Note saved':'Note cleared','g');
+  }catch(e){console.error(e);toast('⚠️ Could not save note','r');}
 }
 
 function startWorkoutFromProgramDay(programId,dayId){
@@ -1751,12 +1945,17 @@ function renderProgramScreen(){
   const vb=document.getElementById('viewAsBannerProgram');
   if(vb)vb.style.display=VIEWUSER?'block':'none';
 
-  const mine=myAssignedProgram();
+  const st=myAssignedProgramState();
+  const mine=st.prog;
   const wrap=document.getElementById('myProgramWrap');
   const browseHdr=document.getElementById('browseProgHdr');
   if(wrap){
-    if(!mine){
-      wrap.innerHTML=`<div class="card wkt-empty">📋 No program assigned yet — pick one below, or ask your coach to assign one.</div>`;
+    if(st.state==='loading'){
+      wrap.innerHTML=`<div class="card wkt-empty">⏳ Loading your program…</div>`;
+    } else if(st.state==='missing'){
+      wrap.innerHTML=`<div class="card wkt-empty">📋 Your assigned program is no longer available. Ask your coach to assign a new one.</div>`;
+    } else if(st.state==='none'||!mine){
+      wrap.innerHTML=`<div class="card wkt-empty">📋 No program assigned yet — ask your coach to assign one, or pick from available programs below.</div>`;
     } else {
       wrap.innerHTML=`<div class="prog-card assigned">
         <span class="assigned-badge">Your Program</span>
@@ -1768,9 +1967,9 @@ function renderProgramScreen(){
               <div class="prog-day-mini-nm">${escHtml(d.name)}</div>
               <button class="b-secondary" style="width:auto;padding:6px 12px;font-size:11px" onclick="startWorkoutFromProgramDay('${mine.id}','${d.id}')">▶ Log this day</button>
             </div>
-                       ${(d.exercises||[]).map(ex=>{const demo=findDemoForExercise(ex.name);return `<div class="prog-ex-mini-row"><span class="prog-ex-mini-nm">${escHtml(ex.name)}</span><span style="display:flex;align-items:center;gap:8px;"><span class="prog-ex-mini-tgt">${ex.targetSets||'—'}×${escHtml(ex.targetReps||'—')}</span>${demo?`<button class="b-secondary" style="padding:4px 10px;font-size:10px;border-radius:6px;" onclick="playDemoVideo('${demo.id}')">▶ Demo</button>`:''}</span></div>`;}).join('')||'<div style="font-size:11px;color:var(--gry2)">No exercises listed</div>'}
+            ${(d.exercises||[]).map(ex=>{const demo=findDemoForExercise(ex.name);return `<div class="prog-ex-mini-row"><span class="prog-ex-mini-nm">${escHtml(ex.name)}</span><span style="display:flex;align-items:center;gap:8px;"><span class="prog-ex-mini-tgt">${ex.targetSets||'—'}×${escHtml(ex.targetReps||'—')}</span>${demo?`<button class="b-secondary" style="padding:4px 10px;font-size:10px;border-radius:6px;" onclick="playDemoVideo('${demo.id}')">▶ Demo</button>`:''}</span></div>`;}).join('')||'<div style="font-size:11px;color:var(--gry2)">No exercises listed</div>'}
           </div>`).join('')||'<div style="font-size:12px;color:var(--gry)">This program has no days yet.</div>'}
-        <button class="cal-toggle-btn" onclick="assignProgramToUser('${u.email}',null)">✕ Unassign this program</button>
+        ${isAdmin()?`<button class="cal-toggle-btn" onclick="assignProgramToUser('${u.email}',null)">✕ Unassign this program</button>`:''}
       </div>`;
     }
   }
@@ -1779,16 +1978,17 @@ function renderProgramScreen(){
   const bl=document.getElementById('progBrowseList');
   if(browseHdr)browseHdr.textContent=mine?'Switch to another program':'Available Programs';
   if(bl){
+    // Members: only show browse if coach allows self-select, or always show for flexibility
     const others=list.filter(p=>!mine||p.id!==mine.id);
     if(!others.length){
-      bl.innerHTML=`<div class="card wkt-empty">${list.length?'You are already on the only available program.':'No programs available yet — check back once your coach adds one.'}</div>`;
+      bl.innerHTML=`<div class="card wkt-empty">${list.length?'You are already on the only available program.':'No programs available yet — your coach will add one soon.'}</div>`;
     } else {
       bl.innerHTML=others.map(p=>`
         <div class="prog-card">
           <div class="prog-card-nm">${escHtml(p.name)}</div>
           ${p.description?`<div class="prog-card-desc">${escHtml(p.description)}</div>`:''}
           <div style="font-size:11px;color:var(--gry2);margin-bottom:10px">${(p.days||[]).length} day${(p.days||[]).length===1?'':'s'} · ${(p.days||[]).reduce((s,d)=>s+(d.exercises||[]).length,0)} exercises</div>
-          <button class="b-secondary" style="width:auto;padding:9px 16px" onclick="assignProgramToUser('${u.email}','${p.id}')">Use this program</button>
+          <button class="b-secondary" style="width:auto;padding:9px 16px" onclick="assignProgramToUser('${u.email}','${p.id}')">${isAdmin()?'Assign this program':'Use this program'}</button>
         </div>`).join('');
     }
   }
@@ -2052,18 +2252,76 @@ function renderDash(){
   const cont=document.getElementById('dashContent');
   if(u.status==='pending'&&!VIEWUSER){
     pend.style.display='block';
-    // Still show basic structure but gray out
     cont.style.opacity='0.4';cont.style.pointerEvents='none';
   } else {
     pend.style.display='none';
     cont.style.opacity='1';cont.style.pointerEvents='auto';
   }
 
+  const ci=myCI();
+  const wkts=myWorkouts();
+
+  // ── Onboarding checklist (first ~2 weeks / sparse data) ──
+  const ob=document.getElementById('onboardWrap');
+  if(ob && u.status==='approved' && !VIEWUSER){
+    const hasCI=ci.length>0;
+    const hasProg=!!u.programId;
+    const hasWkt=wkts.length>0;
+    const allDone=hasCI&&hasProg&&hasWkt;
+    if(!allDone && ci.length<5){
+      ob.style.display='block';
+      ob.innerHTML=`<div class="onboard-card">
+        <div class="ob-ttl">🚀 Getting started</div>
+        <div class="ob-item ${hasCI?'ob-done':''}">${hasCI?'✅':'1️⃣'} Complete your first check-in</div>
+        <div class="ob-item ${hasProg?'ob-done':''}">${hasProg?'✅':'2️⃣'} Open your Program (coach will assign one)</div>
+        <div class="ob-item ${hasWkt?'ob-done':''}">${hasWkt?'✅':'3️⃣'} Log your first workout from the program</div>
+      </div>`;
+    } else ob.style.display='none';
+  } else if(ob) ob.style.display='none';
+
+  // ── Coach note ──
+  const cn=document.getElementById('coachNoteWrap');
+  if(cn){
+    if(u.coachNote && String(u.coachNote).trim()){
+      cn.style.display='block';
+      cn.innerHTML=`<div class="coach-note-card"><div class="cn-ttl">💬 Note from your coach</div><div class="cn-body">${escHtml(u.coachNote)}</div></div>`;
+    } else cn.style.display='none';
+  }
+
+  // ── Assigned program card ──
+  const dp=document.getElementById('dashProgWrap');
+  if(dp){
+    const st=myAssignedProgramState();
+    if(st.state==='loading'){
+      dp.style.display='block';
+      dp.innerHTML=`<div class="dash-prog-card"><div class="dpc-ttl">Your program</div><div class="dpc-desc">Loading…</div></div>`;
+    } else if(st.state==='ready' && st.prog){
+      const p=st.prog;
+      const firstDay=(p.days&&p.days[0])?p.days[0]:null;
+      dp.style.display='block';
+      dp.innerHTML=`<div class="dash-prog-card">
+        <div class="dpc-ttl">📋 Your program</div>
+        <div class="dpc-nm">${escHtml(p.name)}</div>
+        ${p.description?`<div class="dpc-desc">${escHtml(p.description)}</div>`:''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="b-secondary" style="width:auto;padding:8px 14px;font-size:12px" onclick="goTab('program',document.getElementById('tbProgram'))">View full plan</button>
+          ${firstDay?`<button class="b-grn" style="width:auto;padding:8px 14px;font-size:12px;background:var(--grn);color:#000;border:none;border-radius:8px;font-weight:800;cursor:pointer" onclick="startWorkoutFromProgramDay('${p.id}','${firstDay.id}')">▶ Log a day</button>`:''}
+        </div>
+      </div>`;
+    } else if(st.state==='none' && u.status==='approved'){
+      dp.style.display='block';
+      dp.innerHTML=`<div class="dash-prog-card" style="border-color:var(--bdr2);background:var(--dark)">
+        <div class="dpc-ttl" style="color:var(--gry)">Your program</div>
+        <div class="dpc-desc">No program assigned yet. Your coach will set one up — or browse available plans on the Program tab.</div>
+        <button class="b-secondary" style="width:auto;padding:8px 14px;font-size:12px" onclick="goTab('program',document.getElementById('tbProgram'))">Open Program</button>
+      </div>`;
+    } else dp.style.display='none';
+  }
+
   // Baseline banner
   if(u.baseWeight&&u.baseWaist){
     const bb=document.getElementById('baselineBanner');
     bb.style.display='block';
-    const ci=myCI();
     const last=ci[ci.length-1];
     const wDiff=last?(last.weight-u.baseWeight).toFixed(1):null;
     const waDiff=last?(last.waist-u.baseWaist).toFixed(1):null;
@@ -2072,10 +2330,9 @@ function renderDash(){
       (wDiff!==null?`<br>Change: <strong style="color:${parseFloat(wDiff)<0?'var(--grn)':'var(--red)'}">${wDiff>0?'+':''}${wDiff} kg</strong> · <strong style="color:${parseFloat(waDiff)<0?'var(--grn)':'var(--red)'}">${waDiff>0?'+':''}${waDiff} in</strong>`:'');
   }
 
-  const ci=myCI();
   document.getElementById('totCI').textContent=ci.length;
   document.getElementById('strN').textContent=calcStreak(ci);
-  if(!ci.length){renderSpeedo(0);renderTrend();return;}
+  if(!ci.length){renderSpeedo(0);renderTrend();const pc0=document.getElementById('progCard');if(pc0)pc0.style.display='none';return;}
   const last=ci[ci.length-1],prev=ci.length>1?ci[ci.length-2]:null;
   setMet('mW','mWT',last.weight,'kg',prev?.weight,true);
   setMet('mWa','mWaT',last.waist,'in',prev?.waist,true);
@@ -2094,7 +2351,7 @@ function renderDash(){
     pb.innerHTML=`
       <div class="prog-wrap"><div class="prog-hd"><span>Weight change (7 days)</span><span style="color:${lw<=fw?'var(--grn)':'var(--red)'}">${lw<=fw?'▼':'▲'} ${Math.abs(lw-fw).toFixed(1)} kg</span></div><div class="prog-trk"><div class="prog-fill" style="width:${Math.min((lw/Math.max(...l7.map(c=>c.weight)))*100,100).toFixed(0)}%;background:${lw<=fw?'var(--grn)':'var(--red)'}"></div></div></div>
       <div class="prog-wrap" style="margin-top:10px"><div class="prog-hd"><span>Steps compliance</span><span style="color:var(--grn)">${sh}/${l7.length} days at 10K</span></div><div class="prog-trk"><div class="prog-fill" style="width:${(sh/l7.length*100).toFixed(0)}%;background:var(--grn)"></div></div></div>`;
-  }
+  } else if(pc) pc.style.display='none';
 }
 
 function setMet(vid,tid,val,unit,prev,lb){
@@ -2274,6 +2531,11 @@ const renderAdmin = requireAdmin(function renderAdmin(){
             <option value="">— None —</option>
             ${progOptions}
           </select>
+        </div>`:''}
+        ${!isPend?`<div style="margin-top:8px">
+          <div style="font-size:11px;color:var(--gry);font-weight:600;margin-bottom:4px">💬 Coach note (shown on their dashboard)</div>
+          <textarea class="fi" style="min-height:52px;font-size:12px;width:100%" id="cn-${u.email.replace(/[^a-zA-Z0-9]/g,'_')}" placeholder="e.g. Focus on form this week — great consistency!">${escHtml(u.coachNote||'')}</textarea>
+          <button class="approve-btn" style="margin-top:6px;padding:6px 12px;font-size:11px" onclick="saveCoachNote('${u.email}')">Save note</button>
         </div>`:''}
         <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
           ${isPend?`<button class="approve-btn" onclick="approveUser('${u.email}')">✅ Approve</button>`:''}
