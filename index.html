@@ -580,8 +580,7 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
     <button class="tb active" id="tbDashboard" onclick="goTab('dashboard',this)"><span class="tb-i">📊</span><span class="tb-l">Dashboard</span></button>
     <button class="tb" onclick="goTab('checkin',this)"><span class="tb-i">✏️</span><span class="tb-l">Check-in</span></button>
     <button class="tb" id="tbHistory" onclick="goTab('history',this)"><span class="tb-i">📅</span><span class="tb-l">History</span></button>
-    <button class="tb" id="tbWorkouts" onclick="goTab('workouts',this)"><span class="tb-i">🏋️</span><span class="tb-l">Workouts</span></button>
-    <button class="tb" id="tbProgram" onclick="goTab('program',this)"><span class="tb-i">📋</span><span class="tb-l">Program</span></button>
+    <button class="tb" id="tbWorkouts" onclick="goTab('workouts',this)"><span class="tb-i">🏋️</span><span class="tb-l">Train</span></button>
        <button class="tb" id="photosTab" onclick="goTab('photos',this)"><span class="tb-i">📸</span><span class="tb-l">Photos</span></button>
     <button class="tb" id="libraryTab" onclick="goTab('library',this)"><span class="tb-i">🎬</span><span class="tb-l">Library</span></button>
     <button class="tb" id="adminTab" style="display:none" onclick="goTab('admin',this)"><span class="tb-i">🔧</span><span class="tb-l">Admin</span></button>
@@ -786,30 +785,33 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
     </div>
   </div>
 
-  <!-- WORKOUTS -->
+  <!-- TRAIN (program + workouts) -->
   <div class="scr" id="scr-workouts">
-    <div class="scr-ttl">WORKOUTS</div>
-    <div class="scr-sub">Log sessions · track sets, reps & weight</div>
+    <div class="scr-ttl">TRAIN</div>
+    <div class="scr-sub">Your plan · log sessions</div>
     <div id="viewAsBannerWorkouts" style="display:none;background:var(--grn-dim);border:1px solid rgba(126,224,0,.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700;color:var(--grn)"></div>
+    <div id="viewAsBannerProgram" style="display:none"></div>
 
     <div class="wkt-stats-row" id="wktStatsRow"></div>
 
-    <!-- Start from assigned program -->
-    <div id="wktFromProgWrap"></div>
+    <!-- Assigned program (primary) -->
+    <div id="myProgramWrap"></div>
+    <div class="scr-sub" style="margin-top:14px;margin-bottom:8px;display:none" id="browseProgHdr">Switch program</div>
+    <div id="progBrowseList"></div>
 
-    <div class="card">
+    <!-- Logger — hidden until they tap a program day or custom log -->
+    <div class="card" id="wktLoggerCard" style="display:none;margin-top:12px">
+      <div class="card-lbl" id="wktLoggerLbl">Log session</div>
       <div class="wkt-hdr-row">
-        <input class="wkt-title-in" id="wktTitleIn" placeholder="Workout name (e.g. Push Day)">
-        <input class="dp-native" id="wktDateIn" type="date" style="width:150px;margin-top:0" onchange="onWktDateChange()">
+        <input class="wkt-title-in" id="wktTitleIn" placeholder="Workout name (e.g. Push Day)" aria-label="Workout name">
+        <input class="dp-native" id="wktDateIn" type="date" style="width:150px;margin-top:0" onchange="onWktDateChange()" aria-label="Workout date">
       </div>
       <div id="exList"></div>
       <button class="add-ex-btn" onclick="addExercise()">＋ Add Exercise</button>
       <button class="save-btn" id="saveWktBtn" onclick="saveWorkout()">🏋️ Save Workout</button>
       <div style="text-align:center;margin-top:8px" id="cancelEditWrap"></div>
     </div>
-
-    <!-- Exercise progression charts -->
-    <div id="exProgWrap" style="margin-top:16px"></div>
+    <div id="wktFromProgWrap" style="display:none"></div>
 
     <!-- Training calendar -->
     <div class="card" id="wktCalCard" style="margin-top:12px;display:none">
@@ -817,18 +819,11 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
       <div class="wkt-cal" id="wktCalGrid"></div>
     </div>
 
-    <div class="scr-sub" style="margin-top:18px;margin-bottom:8px">Workout Log</div>
-    <div id="wktHistList"></div>
-  </div>
+    <!-- Exercise progression charts -->
+    <div id="exProgWrap" style="margin-top:16px"></div>
 
-  <!-- PROGRAM -->
-  <div class="scr" id="scr-program">
-    <div class="scr-ttl">PROGRAM</div>
-    <div class="scr-sub">Your plan from the coach</div>
-    <div id="viewAsBannerProgram" style="display:none;background:var(--grn-dim);border:1px solid rgba(126,224,0,.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700;color:var(--grn)">👁️ Coach view — assigning/browsing on this member's behalf</div>
-    <div id="myProgramWrap"></div>
-    <div class="scr-sub" style="margin-top:18px;margin-bottom:8px" id="browseProgHdr">Available Programs</div>
-    <div id="progBrowseList"></div>
+    <div class="scr-sub" style="margin-top:18px;margin-bottom:8px">Session history</div>
+    <div id="wktHistList"></div>
   </div>
 
   <!-- ADMIN -->
@@ -1083,8 +1078,7 @@ function onDataUpdate(){
   if(activeScr.id==='scr-admin') renderAdmin();
   if(activeScr.id==='scr-dashboard') renderDash();
   if(activeScr.id==='scr-history') renderHistory();
-  if(activeScr.id==='scr-workouts') renderWorkoutsScreen();
-  if(activeScr.id==='scr-program') renderProgramScreen();
+  if(activeScr.id==='scr-workouts'){renderProgramScreen();renderWorkoutsScreen();}
   if(activeScr.id==='scr-photos') renderPhotos();
   if(activeScr.id==='scr-library') renderLibrary();
 }
@@ -1316,21 +1310,29 @@ async function doLogout(){
 // TABS
 // ═══════════════════════════════════════
 function goTab(name,btn){
-  if((name==='checkin'||name==='workouts'||name==='program') && CU && CU.status==='pending' && !VIEWUSER){
+  if(name==='program') name='workouts';
+  if((name==='checkin'||name==='workouts') && CU && CU.status==='pending' && !VIEWUSER){
     toast('⏳ This unlocks once the coach approves your account.','a');
     return;
   }
   if(btn && name==='admin')VIEWUSER=null; // exit coach "view as" only when returning to Admin via the bottom nav
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.tb').forEach(t=>t.classList.remove('active'));
-  document.getElementById('scr-'+name).classList.add('active');
+  const scr=document.getElementById('scr-'+name);
+  if(!scr)return;
+  scr.classList.add('active');
   if(btn)btn.classList.add('active');
+  else activateTabButton(TAB_BTN_IDS[name]||null);
   window.scrollTo(0,0);
   if(name==='dashboard')renderDash();
   if(name==='history')renderHistory();
   if(name==='checkin')initCI();
-  if(name==='workouts')initWorkoutForm();
-  if(name==='program')renderProgramScreen();
+  if(name==='workouts'){
+    if(pendingWorkoutPrefill) openWorkoutLogger();
+    else closeWorkoutLogger();
+    renderProgramScreen();
+    renderWorkoutsScreen();
+  }
   if(name==='admin'){
     renderAdmin();
     // If checkins haven't loaded yet, retry once after 1.5s
@@ -1343,6 +1345,7 @@ function goTab(name,btn){
 }
 
 function activateTabButton(id){
+  if(!id)return;
   document.querySelectorAll('.tb').forEach(t=>t.classList.remove('active'));
   const b=document.getElementById(id);
   if(b)b.classList.add('active');
@@ -1350,15 +1353,17 @@ function activateTabButton(id){
 
 function goToWorkoutsFromCI(){
   const wktBtn=document.getElementById('tbWorkouts');
+  pendingWorkoutPrefill={
+    date:(typeof selectedDate!=='undefined' && selectedDate)?selectedDate:today(),
+    title:'',
+    exercises:[newExercise()]
+  };
   goTab('workouts',wktBtn);
-  if(typeof selectedDate!=='undefined' && selectedDate){
-    setTimeout(()=>{ const di=document.getElementById('wktDateIn'); if(di){di.value=selectedDate;onWktDateChange();} },0);
-  }
 }
 
 function viewMember(email){viewMemberAs(email,'dashboard');}
 
-const TAB_BTN_IDS={dashboard:'tbDashboard',checkin:null,history:'tbHistory',workouts:'tbWorkouts',program:'tbProgram'};
+const TAB_BTN_IDS={dashboard:'tbDashboard',checkin:null,history:'tbHistory',workouts:'tbWorkouts',program:'tbWorkouts'};
 function viewMemberAs(email,tab){
   if(!CU||CU.role!=='admin')return;
   const u=gDB().users[email];
@@ -1633,20 +1638,52 @@ function myWorkouts(){const u=VIEWUSER||CU;if(!u)return[];const v=gDB().workouts
 
 let wktBuilder={id:null,date:today(),title:'',exercises:[]};
 let pendingWorkoutPrefill=null;
+let wktLoggerOpen=false;
 
 function newExercise(){return{name:'',sets:[{reps:'',weight:''}]}}
 
+function showWorkoutLogger(show){
+  const card=document.getElementById('wktLoggerCard');
+  if(card)card.style.display=show?'block':'none';
+  wktLoggerOpen=!!show;
+}
+
+function closeWorkoutLogger(){
+  pendingWorkoutPrefill=null;
+  wktBuilder={id:null,date:today(),title:'',exercises:[]};
+  showWorkoutLogger(false);
+  const cancel=document.getElementById('cancelEditWrap');
+  if(cancel)cancel.innerHTML='';
+}
+
+function openWorkoutLogger(opts){
+  opts=opts||{};
+  if(opts.custom){
+    pendingWorkoutPrefill=null;
+    wktBuilder={id:null,date:opts.date||today(),title:'',exercises:[newExercise()]};
+  }
+  showWorkoutLogger(true);
+  initWorkoutForm();
+  const card=document.getElementById('wktLoggerCard');
+  if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
 function initWorkoutForm(){
+  const titleEl=document.getElementById('wktTitleIn');
+  const dateEl=document.getElementById('wktDateIn');
+  const saveBtn=document.getElementById('saveWktBtn');
+  const cancel=document.getElementById('cancelEditWrap');
+  if(!titleEl||!dateEl)return;
   if(pendingWorkoutPrefill){
     wktBuilder={id:null,date:pendingWorkoutPrefill.date||today(),title:pendingWorkoutPrefill.title,exercises:pendingWorkoutPrefill.exercises};
     pendingWorkoutPrefill=null;
-  } else {
-    wktBuilder={id:null,date:today(),title:'',exercises:[newExercise()]};
+  } else if(!wktBuilder.exercises || !wktBuilder.exercises.length){
+    wktBuilder={id:wktBuilder.id||null,date:wktBuilder.date||today(),title:wktBuilder.title||'',exercises:[newExercise()]};
   }
-  document.getElementById('wktTitleIn').value=wktBuilder.title||'';
-  document.getElementById('wktDateIn').value=wktBuilder.date;
-  document.getElementById('cancelEditWrap').innerHTML='';
-  document.getElementById('saveWktBtn').textContent='🏋️ Save Workout';
+  titleEl.value=wktBuilder.title||'';
+  dateEl.value=wktBuilder.date;
+  if(cancel && !wktBuilder.id) cancel.innerHTML='<button class="cal-toggle-btn" onclick="closeWorkoutLogger()">✕ Cancel</button>';
+  if(saveBtn && !wktBuilder.id) saveBtn.textContent='🏋️ Save Workout';
   renderExerciseBuilder();
   renderWorkoutsScreen();
 }
@@ -1748,7 +1785,8 @@ async function saveWorkout(){
     const fresh=await fdb.collection('workouts').doc(u.email).get();
     if(fresh.exists) CACHE.workouts[u.email]=fresh.data().entries||[];
     toast(wktBuilder.id?'🏋️ Workout updated!':'🏋️ Workout saved!','g');
-    initWorkoutForm();
+    closeWorkoutLogger();
+    renderWorkoutsScreen();
   }catch(e){
     console.error(e);
     toast('⚠️ Could not save — check your connection','r');
@@ -1759,12 +1797,14 @@ function editWorkout(id){
   const w=myWorkouts().find(x=>x.id===id);
   if(!w)return;
   wktBuilder={id:w.id,date:w.date,title:w.title||'',exercises:w.exercises.map(ex=>({name:ex.name,sets:ex.sets.map(s=>({reps:s.reps??'',weight:s.weight??''}))}))};
+  showWorkoutLogger(true);
   document.getElementById('wktTitleIn').value=w.title||'';
   document.getElementById('wktDateIn').value=w.date;
   document.getElementById('saveWktBtn').textContent='💾 Update Workout';
-  document.getElementById('cancelEditWrap').innerHTML='<button class="cal-toggle-btn" onclick="initWorkoutForm()">✕ Cancel edit</button>';
+  document.getElementById('cancelEditWrap').innerHTML='<button class="cal-toggle-btn" onclick="closeWorkoutLogger()">✕ Cancel edit</button>';
   renderExerciseBuilder();
-  window.scrollTo({top:0,behavior:'smooth'});
+  const card=document.getElementById('wktLoggerCard');
+  if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 async function deleteWorkout(id){
@@ -1808,28 +1848,9 @@ function renderWorkoutsScreen(){
       <div class="met" style="padding:12px"><div class="met-lbl">Total Sets</div><div class="met-val" style="font-size:24px">${totalSets}</div></div>`;
   }
 
-  // Start from assigned program
+  // Start from assigned program — full plan is already shown above
   const fp=document.getElementById('wktFromProgWrap');
-  if(fp){
-    const st=myAssignedProgramState();
-    if(st.state==='ready' && st.prog && (st.prog.days||[]).length){
-      const days=st.prog.days;
-      fp.innerHTML=`<div class="wkt-from-prog">
-        <div class="wfp-ttl">📋 From your program: ${escHtml(st.prog.name)}</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${days.map(d=>`<button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="startWorkoutFromProgramDay('${st.prog.id}','${d.id}')">▶ ${escHtml(d.name)}</button>`).join('')}
-        </div>
-      </div>`;
-    } else if(st.state==='none'){
-      fp.innerHTML=`<div class="wkt-from-prog" style="border-style:solid;border-color:var(--bdr)">
-        <div class="wfp-ttl" style="color:var(--gry)">No program assigned</div>
-        <div style="font-size:12px;color:var(--gry);margin-bottom:8px">Open the Program tab to see your plan, or log a free workout below.</div>
-        <button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="goTab('program',document.getElementById('tbProgram'))">Go to Program</button>
-      </div>`;
-    } else {
-      fp.innerHTML='';
-    }
-  }
+  if(fp) fp.innerHTML='';
 
   // Exercise progression charts + calendar
   renderExerciseProgression(list);
@@ -1838,7 +1859,7 @@ function renderWorkoutsScreen(){
   const hl=document.getElementById('wktHistList');
   if(!hl)return;
   if(!list.length){
-    hl.innerHTML='<div class="card wkt-empty">🏋️ No workouts logged yet.<br><span style="font-size:12px;opacity:.8">Tip: open your Program and tap <strong>▶ Log this day</strong> to pre-fill exercises, or add them manually above.</span></div>';
+    hl.innerHTML='<div class="card wkt-empty">No sessions logged yet.<br><span style="font-size:12px;opacity:.8">Tap <strong>▶ Log this day</strong> on your program above to start.</span></div>';
     return;
   }
   hl.innerHTML=list.map(w=>{
@@ -2011,8 +2032,7 @@ function startWorkoutFromProgramDay(programId,dayId){
       sets:Array.from({length:Math.max(1,parseInt(ex.targetSets)||3)},()=>({reps:'',weight:'',hint:ex.targetReps||''}))
     }))
   };
-  goTab('workouts',null);
-  activateTabButton('tbWorkouts');
+  goTab('workouts',document.getElementById('tbWorkouts'));
 }
 
 function renderProgramScreen(){
@@ -2031,7 +2051,7 @@ function renderProgramScreen(){
     } else if(st.state==='missing'){
       wrap.innerHTML=`<div class="card wkt-empty">📋 Your assigned program is no longer available. Ask your coach to assign a new one.</div>`;
     } else if(st.state==='none'||!mine){
-      wrap.innerHTML=`<div class="card wkt-empty">📋 No program assigned yet — ask your coach to assign one, or pick from available programs below.</div>`;
+      wrap.innerHTML=`<div class="card wkt-empty">📋 No program assigned yet — ask your coach to assign one, or pick from available programs below.<div style="margin-top:12px"><button class="b-secondary" style="width:auto;padding:8px 14px" onclick="openWorkoutLogger({custom:true})">＋ Log a custom session</button></div></div>`;
     } else {
       wrap.innerHTML=`<div class="prog-card assigned">
         <span class="assigned-badge">Your Program</span>
@@ -2045,6 +2065,7 @@ function renderProgramScreen(){
             </div>
             ${(d.exercises||[]).map(ex=>{const demo=findDemoForExercise(ex.name);return `<div class="prog-ex-mini-row"><span class="prog-ex-mini-nm">${escHtml(ex.name)}</span><span style="display:flex;align-items:center;gap:8px;"><span class="prog-ex-mini-tgt">${ex.targetSets||'—'}×${escHtml(ex.targetReps||'—')}</span>${demo?`<button class="b-secondary" style="padding:4px 10px;font-size:10px;border-radius:6px;" onclick="playDemoVideo('${demo.id}')">▶ Demo</button>`:''}</span></div>`;}).join('')||'<div style="font-size:11px;color:var(--gry2)">No exercises listed</div>'}
           </div>`).join('')||'<div style="font-size:12px;color:var(--gry)">This program has no days yet.</div>'}
+        <button class="cal-toggle-btn" onclick="openWorkoutLogger({custom:true})">＋ Log a custom session</button>
         ${isAdmin()?`<button class="cal-toggle-btn" onclick="assignProgramToUser('${u.email}',null)">✕ Unassign this program</button>`:''}
       </div>`;
     }
@@ -2052,12 +2073,14 @@ function renderProgramScreen(){
 
   const list=allPrograms();
   const bl=document.getElementById('progBrowseList');
-  if(browseHdr)browseHdr.textContent=mine?'Switch to another program':'Available Programs';
+  const others=list.filter(p=>!mine||p.id!==mine.id);
+  if(browseHdr){
+    if(!others.length){browseHdr.style.display='none';}
+    else {browseHdr.style.display='block';browseHdr.textContent=mine?'Switch program':'Available programs';}
+  }
   if(bl){
-    // Members: only show browse if coach allows self-select, or always show for flexibility
-    const others=list.filter(p=>!mine||p.id!==mine.id);
     if(!others.length){
-      bl.innerHTML=`<div class="card wkt-empty">${list.length?'You are already on the only available program.':'No programs available yet — your coach will add one soon.'}</div>`;
+      bl.innerHTML='';
     } else {
       bl.innerHTML=others.map(p=>`
         <div class="prog-card">
@@ -2349,7 +2372,7 @@ function renderDash(){
       ob.innerHTML=`<div class="onboard-card">
         <div class="ob-ttl">🚀 Getting started</div>
         <div class="ob-item ${hasCI?'ob-done':''}">${hasCI?'✅':'1️⃣'} Complete your first check-in</div>
-        <div class="ob-item ${hasProg?'ob-done':''}">${hasProg?'✅':'2️⃣'} Open your Program (coach will assign one)</div>
+        <div class="ob-item ${hasProg?'ob-done':''}">${hasProg?'✅':'2️⃣'} Open Train — your program lives there</div>
         <div class="ob-item ${hasWkt?'ob-done':''}">${hasWkt?'✅':'3️⃣'} Log your first workout from the program</div>
       </div>`;
     } else ob.style.display='none';
@@ -2380,7 +2403,7 @@ function renderDash(){
         <div class="dpc-nm">${escHtml(p.name)}</div>
         ${p.description?`<div class="dpc-desc">${escHtml(p.description)}</div>`:''}
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="b-secondary" style="width:auto;padding:8px 14px;font-size:12px" onclick="goTab('program',document.getElementById('tbProgram'))">View full plan</button>
+          <button class="b-secondary" style="width:auto;padding:8px 14px;font-size:12px" onclick="goTab('workouts',document.getElementById('tbWorkouts'))">Open Train</button>
           ${firstDay?`<button class="b-grn" style="width:auto;padding:8px 14px;font-size:12px;background:var(--grn);color:#000;border:none;border-radius:8px;font-weight:800;cursor:pointer" onclick="startWorkoutFromProgramDay('${p.id}','${firstDay.id}')">▶ Log a day</button>`:''}
         </div>
       </div>`;
@@ -2388,8 +2411,8 @@ function renderDash(){
       dp.style.display='block';
       dp.innerHTML=`<div class="dash-prog-card" style="border-color:var(--bdr2);background:var(--dark)">
         <div class="dpc-ttl" style="color:var(--gry)">Your program</div>
-        <div class="dpc-desc">No program assigned yet. Your coach will set one up — or browse available plans on the Program tab.</div>
-        <button class="b-secondary" style="width:auto;padding:8px 14px;font-size:12px" onclick="goTab('program',document.getElementById('tbProgram'))">Open Program</button>
+        <div class="dpc-desc">No program assigned yet. Your coach will set one up — or open Train to browse plans.</div>
+        <button class="b-secondary" style="width:auto;padding:8px 14px;font-size:12px" onclick="goTab('workouts',document.getElementById('tbWorkouts'))">Open Train</button>
       </div>`;
     } else dp.style.display='none';
   }
@@ -2658,8 +2681,7 @@ const renderAdmin = requireAdmin(function renderAdmin(){
         <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
           ${isPend?`<button class="approve-btn" onclick="approveUser('${u.email}')">✅ Approve</button>`:''}
           ${!isPend?`<button class="approve-btn" onclick="viewMember('${u.email}')">📊 Dashboard</button>`:''}
-          ${!isPend?`<button class="approve-btn" onclick="viewMemberAs('${u.email}','workouts')">🏋️ Workouts</button>`:''}
-          ${!isPend?`<button class="approve-btn" onclick="viewMemberAs('${u.email}','program')">📋 Program</button>`:''}
+          ${!isPend?`<button class="approve-btn" onclick="viewMemberAs('${u.email}','workouts')">🏋️ Train</button>`:''}
           ${!isPend&&ci.length?`<button class="approve-btn" style="background:#1a2a1a;color:var(--grn);border:1px solid var(--grn)" onclick="exportUserPDF('${u.email}')">📄 PDF Report</button>`:''}
           ${!isPend&&ci.length?`<button class="approve-btn" style="background:var(--dark2);color:var(--txt);border:1px solid var(--bdr2)" onclick="exportUserCSV('${u.email}')">⬇️ CSV</button>`:''}
           ${!isPend?`<button class="approve-btn" style="background:var(--dark2);color:var(--txt);border:1px solid var(--bdr2)" onclick="resetPassword('${u.email}')">🔑 Reset PW</button>`:''}
