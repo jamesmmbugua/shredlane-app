@@ -306,14 +306,20 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
 .sq-btn.sel-red{border-color:#EF4444;background:rgba(239,68,68,.15);color:#EF4444}
 .sq-btn.sel-amber{border-color:#F59E0B;background:rgba(245,158,11,.15);color:#F59E0B}
 .sq-btn.sel-grn{border-color:#FFD600;background:var(--grn-dim);color:#FFD600}
-/* ── Water counter ── */
-.water-wrap{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
-.water-glasses{display:flex;gap:5px;flex-wrap:wrap;flex:1}
-.water-glass{font-size:22px;opacity:.2;cursor:pointer;transition:.1s;-webkit-tap-highlight-color:transparent}
-.water-glass.full{opacity:1}
-.water-btns{display:flex;flex-direction:column;gap:6px;margin-left:12px}
-.water-btn{background:var(--dark2);border:1px solid var(--bdr2);border-radius:8px;width:36px;height:36px;font-size:18px;color:var(--wht);cursor:pointer;display:flex;align-items:center;justify-content:center}
-.water-lbl{font-size:11px;color:var(--gry);margin-top:6px}
+/* ── Water intake (ml / L) ── */
+.water-wrap{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.water-row{display:flex;align-items:center;gap:8px}
+.water-btn{background:var(--dark2);border:1px solid var(--bdr2);border-radius:8px;min-width:44px;height:40px;padding:0 10px;font-size:14px;font-weight:700;color:var(--wht);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.water-btn:active{border-color:var(--grn);color:var(--grn)}
+.water-input{flex:1;background:var(--dark2);border:1px solid var(--bdr2);border-radius:8px;color:var(--wht);font-size:16px;font-weight:700;padding:10px 12px;text-align:center;font-family:'DM Mono',monospace}
+.water-input:focus{outline:none;border-color:var(--grn)}
+.water-unit{font-size:12px;font-weight:700;color:var(--gry);min-width:28px}
+.water-quick{display:flex;flex-wrap:wrap;gap:6px}
+.water-chip{background:var(--dark2);border:1px solid var(--bdr2);border-radius:20px;padding:6px 10px;font-size:11px;font-weight:700;color:var(--txt);cursor:pointer}
+.water-chip:active,.water-chip.on{border-color:var(--grn);color:var(--grn);background:var(--grn-dim)}
+.water-lbl{font-size:11px;color:var(--gry);margin-top:2px}
+.water-bar{height:6px;background:var(--dark3);border-radius:4px;overflow:hidden;margin-top:4px}
+.water-bar>i{display:block;height:100%;background:var(--grn);border-radius:4px;transition:width .2s}
 /* ── History total-lost banner ── */
 .tl-banner{background:linear-gradient(135deg,#1a2a00,#0e1a00);border:1px solid rgba(255,214,0,.3);border-radius:12px;padding:14px 16px;margin-bottom:14px;text-align:center}
 .tl-main{font-size:18px;font-weight:800;color:var(--grn);font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px}
@@ -753,15 +759,25 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
     </div>
 
     <div class="card">
-      <div class="card-lbl">Water Intake <span class="ci-lv" id="ciWaterL">0 glasses</span></div>
+      <div class="card-lbl">Water Intake <span class="ci-lv" id="ciWaterL">0 ml</span></div>
       <div class="water-wrap">
-        <div class="water-glasses" id="waterGlasses"></div>
-        <div class="water-btns">
-          <button class="water-btn" onclick="adjustWater(1)">+</button>
-          <button class="water-btn" onclick="adjustWater(-1)">−</button>
+        <div class="water-row">
+          <button type="button" class="water-btn" onclick="adjustWater(-250)" aria-label="Minus 250 ml">−250</button>
+          <input class="water-input" id="waterMlInput" type="number" min="0" max="10000" step="50" value="0" inputmode="numeric" onchange="setWaterMl(this.value)" oninput="setWaterMl(this.value,true)">
+          <span class="water-unit">ml</span>
+          <button type="button" class="water-btn" onclick="adjustWater(250)" aria-label="Plus 250 ml">+250</button>
         </div>
+        <div class="water-quick" id="waterQuick">
+          <button type="button" class="water-chip" onclick="setWaterMl(250)">250 ml</button>
+          <button type="button" class="water-chip" onclick="setWaterMl(500)">500 ml</button>
+          <button type="button" class="water-chip" onclick="setWaterMl(1000)">1 L</button>
+          <button type="button" class="water-chip" onclick="setWaterMl(1500)">1.5 L</button>
+          <button type="button" class="water-chip" onclick="setWaterMl(2000)">2 L</button>
+          <button type="button" class="water-chip" onclick="setWaterMl(3000)">3 L</button>
+        </div>
+        <div class="water-bar" aria-hidden="true"><i id="waterBarFill" style="width:0%"></i></div>
       </div>
-      <div class="water-lbl">Target: 8 glasses/day · Tap a glass to set</div>
+      <div class="water-lbl">Target: 3 L (3000 ml) / day · Enter ml or use quick buttons</div>
     </div>
 
     <button class="save-btn" id="saveCIBtn" onclick="saveCI()">🔥 Save Check-in</button>
@@ -1517,7 +1533,7 @@ function pickDate(ds){
     document.getElementById('ciNotes').value=existing.notes||'';
     proteinPct=existing.protein??null;workoutDone=existing.workout??null;sleepQual=existing.sleepQual??null;
     renderHabits();
-    waterCount=existing.water||0;renderWater();
+    waterCount=waterToMl(existing.water||0);renderWater();
     renderSpeedo(existing.steps||0);
     toast('📋 Existing entry loaded — edit and save to update','a');
   } else {
@@ -1625,21 +1641,54 @@ function renderHabits(){
   if(sleepQual!==null)setSleepQual(sleepQual);
 }
 
-// ── Water counter ──
-let waterCount=0;
+// ── Water intake in millilitres (old glass counts auto-convert on load) ──
+const WATER_TARGET_ML = 3000;
+const WATER_GLASS_ML = 250; // only for migrating old 1–15 "glasses" values
+let waterCount = 0; // millilitres
+
+function waterToMl(v){
+  if(v==null||v===''||isNaN(Number(v))) return 0;
+  v = Number(v);
+  // Old check-ins used whole glasses (typically 0–12)
+  if(v > 0 && v <= 15 && Math.abs(v - Math.round(v)) < 1e-9) return Math.round(v) * WATER_GLASS_ML;
+  return Math.max(0, Math.round(v));
+}
+function formatWater(ml){
+  ml = Math.max(0, Math.round(Number(ml)||0));
+  const liters = ml / 1000;
+  let litStr = (Math.round(liters * 100) / 100).toFixed(2);
+  litStr = litStr.replace(/\.00$/,'').replace(/(\.\d)0$/,'$1');
+  if(ml >= 1000) return litStr + ' L (' + ml + ' ml)';
+  return ml + ' ml';
+}
 function adjustWater(d){
-  waterCount=Math.max(0,Math.min(12,waterCount+d));
+  waterCount = Math.max(0, Math.min(10000, (Number(waterCount)||0) + Number(d)));
   renderWater();
 }
-function setWater(n){waterCount=n;renderWater();}
-function renderWater(){
-  const el=document.getElementById('waterGlasses');
-  const lbl=document.getElementById('ciWaterL');
-  if(!el)return;
-  el.innerHTML=Array.from({length:8},(_,i)=>
-    `<span class="water-glass${i<waterCount?' full':''}" onclick="setWater(${i+1})">💧</span>`
-  ).join('');
-  if(lbl)lbl.textContent=waterCount+' glass'+(waterCount===1?'':'es')+(waterCount>=8?' ✓':'');
+function setWater(n){ setWaterMl(n); }
+function setWaterMl(n, soft){
+  let v = parseInt(n, 10);
+  if(isNaN(v)) v = 0;
+  waterCount = Math.max(0, Math.min(10000, v));
+  renderWater(!!soft);
+}
+function renderWater(soft){
+  const lbl = document.getElementById('ciWaterL');
+  const inp = document.getElementById('waterMlInput');
+  const bar = document.getElementById('waterBarFill');
+  if(inp && !soft) inp.value = waterCount || 0;
+  if(lbl){
+    const done = waterCount >= WATER_TARGET_ML;
+    lbl.textContent = formatWater(waterCount) + (done ? ' ✓' : '');
+  }
+  if(bar){
+    const pct = Math.max(0, Math.min(100, (waterCount / WATER_TARGET_ML) * 100));
+    bar.style.width = pct + '%';
+  }
+  const presets = [250,500,1000,1500,2000,3000];
+  document.querySelectorAll('#waterQuick .water-chip').forEach((chip,i)=>{
+    if(presets[i]!=null) chip.classList.toggle('on', waterCount === presets[i]);
+  });
 }
 
 async function saveCI(){
@@ -2661,7 +2710,7 @@ async function generateDemoCheckins(){
         protein:Math.floor(60+Math.random()*40),
         workout:Math.random()>0.4,
         sleepQual:Math.floor(1+Math.random()*3),
-        water:Math.floor(4+Math.random()*7),
+        water:Math.floor(1500+Math.random()*2000),
         notes:i===13?'Starting the journey! 💪':i===7?'Great week! 🔥':''
       });
     }
@@ -2856,7 +2905,7 @@ function csvEscape(v){
 const exportAllCSV = requireAdmin(function exportAllCSV(){
   if(!CU||CU.role!=='admin')return;
   const d=gDB();
-  const rows=[['Name','Email','Goal','Status','Joined','Date','Weight (kg)','Waist (in)','Steps','Sleep (hrs)','Sleep Quality','Hunger (1-10)','Water (glasses)','Protein %','Workout','Notes']];
+  const rows=[['Name','Email','Goal','Status','Joined','Date','Weight (kg)','Waist (in)','Steps','Sleep (hrs)','Sleep Quality','Hunger (1-10)','Water (ml)','Protein %','Workout','Notes']];
   const members=Object.values(d.users).filter(u=>u.role!=='admin');
   const sqL=['Poor','Fair','Good','Great'];
   members.forEach(u=>{
@@ -2865,7 +2914,7 @@ const exportAllCSV = requireAdmin(function exportAllCSV(){
       rows.push([u.name,u.email,u.goal,u.status,u.joined,'','','','','','','','','','','']);
     }else{
       ci.forEach(c=>{
-        rows.push([u.name,u.email,u.goal,u.status,u.joined,c.date,c.weight,c.waist,c.steps,c.sleep,c.sleepQual!=null?sqL[c.sleepQual]:'',c.hunger,c.water??'',c.protein!=null?c.protein+'%':'',c.workout===true?'Yes':c.workout===false?'No':'',c.notes||'']);
+        rows.push([u.name,u.email,u.goal,u.status,u.joined,c.date,c.weight,c.waist,c.steps,c.sleep,c.sleepQual!=null?sqL[c.sleepQual]:'',c.hunger,(c.water!=null&&c.water!==''?waterToMl(c.water):''),c.protein!=null?c.protein+'%':'',c.workout===true?'Yes':c.workout===false?'No':'',c.notes||'']);
       });
     }
   });
@@ -2878,9 +2927,9 @@ function exportMyCSV(){
   if(!CU)return;
   const u=VIEWUSER||CU;
   const ci=[...(Array.isArray(gDB().checkins[u.email])?gDB().checkins[u.email]:[])].sort((a,b)=>a.date.localeCompare(b.date));
-  const rows=[['Date','Weight (kg)','Waist (in)','Steps','Sleep (hrs)','Sleep Quality','Hunger (1-10)','Water (glasses)','Protein %','Workout','Notes']];
+  const rows=[['Date','Weight (kg)','Waist (in)','Steps','Sleep (hrs)','Sleep Quality','Hunger (1-10)','Water (ml)','Protein %','Workout','Notes']];
   const sqL=['Poor','Fair','Good','Great'];
-  ci.forEach(c=>rows.push([c.date,c.weight??'',c.waist??'',c.steps??'',c.sleep??'',c.sleepQual!=null?sqL[c.sleepQual]:'',c.hunger??'',c.water??'',c.protein!=null?c.protein+'%':'',c.workout===true?'Yes':c.workout===false?'No':'',c.notes||'']));
+  ci.forEach(c=>rows.push([c.date,c.weight??'',c.waist??'',c.steps??'',c.sleep??'',c.sleepQual!=null?sqL[c.sleepQual]:'',c.hunger??'',(c.water!=null&&c.water!==''?waterToMl(c.water):''),c.protein!=null?c.protein+'%':'',c.workout===true?'Yes':c.workout===false?'No':'',c.notes||'']));
   const csv=rows.map(r=>r.map(csvEscape).join(',')).join('\n');
   downloadBlob(csv,'shredlane-'+u.name.replace(/\s+/g,'_')+'-'+today()+'.csv','text/csv');
   toast('⬇️ CSV exported','g');
@@ -3267,8 +3316,8 @@ function exportUserCSV(email){
   const ci=[...(Array.isArray(gDB().checkins[email])?gDB().checkins[email]:[])].filter(e=>e&&e.date).sort((a,b)=>a.date.localeCompare(b.date));
   if(!ci.length){toast('No check-ins to export for '+u.name,'a');return;}
   const sqL=['Poor','Fair','Good','Great'];
-  const rows=[['Date','Weight (kg)','Waist (in)','Steps','Sleep (hrs)','Sleep Quality','Hunger (1-10)','Water (glasses)','Protein %','Workout','Notes']];
-  ci.forEach(c=>rows.push([c.date,c.weight??'',c.waist??'',c.steps??'',c.sleep??'',c.sleepQual!=null?sqL[c.sleepQual]:'',c.hunger??'',c.water??'',c.protein!=null?c.protein+'%':'',c.workout===true?'Yes':c.workout===false?'No':'',c.notes||'']));
+  const rows=[['Date','Weight (kg)','Waist (in)','Steps','Sleep (hrs)','Sleep Quality','Hunger (1-10)','Water (ml)','Protein %','Workout','Notes']];
+  ci.forEach(c=>rows.push([c.date,c.weight??'',c.waist??'',c.steps??'',c.sleep??'',c.sleepQual!=null?sqL[c.sleepQual]:'',c.hunger??'',(c.water!=null&&c.water!==''?waterToMl(c.water):''),c.protein!=null?c.protein+'%':'',c.workout===true?'Yes':c.workout===false?'No':'',c.notes||'']));
   const csv=rows.map(r=>r.map(csvEscape).join(',')).join('\n');
   downloadBlob(csv,'shredlane-'+u.name.replace(/\s+/g,'_')+'-'+today()+'.csv','text/csv');
   toast('⬇️ CSV exported for '+u.name,'g');
