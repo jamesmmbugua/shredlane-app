@@ -716,7 +716,12 @@ input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);}
       <div class="card-lbl">Body Metrics</div>
       <div class="ci-row" style="margin-bottom:16px">
         <div><div class="ci-lbl">Weight <span class="ci-lv" id="ciWtL">— kg</span></div><input class="ci-in" type="number" id="ciWt" placeholder="e.g. 82.5" step="0.1" inputmode="decimal" oninput="document.getElementById('ciWtL').textContent=this.value?this.value+' kg':'— kg'"></div>
-        <div><div class="ci-lbl">Waist <span class="ci-lv" id="ciWaL">— in</span></div><input class="ci-in" type="number" id="ciWa" placeholder="e.g. 34.5" step="0.5" inputmode="decimal" oninput="document.getElementById('ciWaL').textContent=this.value?this.value+' in':'— in'"></div>
+        <div><div class="ci-lbl">Waist <span class="ci-lv" id="ciWaL">— in</span>
+        <span class="unit-toggle" id="waistUnitToggle">
+          <button type="button" id="wuIn" class="on" onclick="setWaistUnit('in')">in</button>
+          <button type="button" id="wuCm" onclick="setWaistUnit('cm')">cm</button>
+        </span>
+      </div><input class="ci-in" type="number" id="ciWa" placeholder="e.g. 34.5" step="0.5" inputmode="decimal" oninput="(function(v){const u=(CU&&userGoals(CU).waistUnit)||'in';document.getElementById('ciWaL').textContent=v?v+' '+u:'— '+u;})(this.value)"></div>
       </div>
       <div class="ci-grp"><div class="ci-lbl">Steps <span class="ci-lv" id="ciStL">0</span></div><input class="ci-in" type="number" id="ciSt" placeholder="Target: 10,000 steps" inputmode="numeric" oninput="onSt(this.value)"><div style="font-size:10px;color:var(--gry2);margin-top:5px">Target: 10,000 steps/day</div></div>
     </div>
@@ -1534,6 +1539,13 @@ function pickDate(ds){
     proteinPct=existing.protein??null;workoutDone=existing.workout??null;sleepQual=existing.sleepQual??null;
     renderHabits();
     waterCount=waterToMl(existing.water||0);renderWater();
+    try{
+      const wu=userGoals(CU).waistUnit;
+      const bIn=document.getElementById('wuIn'), bCm=document.getElementById('wuCm');
+      if(bIn&&bCm){bIn.classList.toggle('on',wu==='in');bCm.classList.toggle('on',wu==='cm');}
+      const waL=document.getElementById('ciWaL');
+      if(waL){const v=document.getElementById('ciWa').value;waL.textContent=v?v+' '+wu:'— '+wu;}
+    }catch(e){}
     renderSpeedo(existing.steps||0);
     toast('📋 Existing entry loaded — edit and save to update','a');
   } else {
@@ -1676,26 +1688,301 @@ function renderWater(soft){
   const lbl = document.getElementById('ciWaterL');
   const inp = document.getElementById('waterMlInput');
   const bar = document.getElementById('waterBarFill');
+  const target = (typeof userGoals==='function' && CU) ? userGoals(CU).waterMl : WATER_TARGET_ML;
   if(inp && !soft) inp.value = waterCount || 0;
   if(lbl){
-    const done = waterCount >= WATER_TARGET_ML;
+    const done = waterCount >= target;
     lbl.textContent = formatWater(waterCount) + (done ? ' ✓' : '');
   }
   if(bar){
-    const pct = Math.max(0, Math.min(100, (waterCount / WATER_TARGET_ML) * 100));
+    const pct = Math.max(0, Math.min(100, (waterCount / target) * 100));
     bar.style.width = pct + '%';
   }
+  const tip = document.querySelector('.water-lbl');
+  if(tip) tip.textContent = 'Target: ' + formatWater(target) + ' / day · Enter ml or use quick buttons';
   const presets = [250,500,1000,1500,2000,3000];
   document.querySelectorAll('#waterQuick .water-chip').forEach((chip,i)=>{
     if(presets[i]!=null) chip.classList.toggle('on', waterCount === presets[i]);
   });
 }
 
+
+// ═══════════════════════════════════════
+// CLIENT + COACH UX PACK (targets, alerts, adherence, bulk)
+// ═══════════════════════════════════════
+function userGoals(u){
+  u = u || CU || {};
+  return {
+    waterMl: Math.max(500, parseInt(u.waterTargetMl,10) || WATER_TARGET_ML || 3000),
+    steps: Math.max(1000, parseInt(u.stepsTarget,10) || 10000),
+    sleep: Math.max(4, parseFloat(u.sleepTarget) || 7),
+    waistUnit: (u.waistUnit === 'cm') ? 'cm' : 'in'
+  };
+}
+function waistToStorage(val, unit){
+  val = parseFloat(val);
+  if(isNaN(val)) return null;
+  return unit === 'cm' ? (val / 2.54) : val; // store inches
+}
+function waistFromStorage(valIn, unit){
+  valIn = parseFloat(valIn);
+  if(isNaN(valIn)) return '';
+  return unit === 'cm' ? (valIn * 2.54) : valIn;
+}
+function formatWaist(valIn, unit){
+  const v = waistFromStorage(valIn, unit);
+  if(v===''||v==null||isNaN(v)) return '—';
+  return (unit==='cm' ? Number(v).toFixed(1) + ' cm' : Number(v).toFixed(1) + ' in');
+}
+function daysSinceDate(dateStr){
+  if(!dateStr) return 999;
+  const a = new Date(dateStr + 'T12:00:00');
+  const b = new Date();
+  b.setHours(12,0,0,0);
+  return Math.floor((b - a) / 86400000);
+}
+function lastCheckinDate(ci){
+  if(!ci||!ci.length) return null;
+  return ci.reduce((a,b)=>!a||b.date>a?b.date:a, null);
+}
+function lastPhotoDate(email){
+  const raw = (CACHE.photos && CACHE.photos[email]) || [];
+  const list = Array.isArray(raw) ? raw : (raw.entries || []);
+  if(!list.length) return null;
+  return list.reduce((a,b)=>!a||(b.date&&b.date>a)?b.date:a, null);
+}
+function adherencePct(u, days){
+  days = days || 14;
+  const ci = Array.isArray(CACHE.checkins[u.email]) ? CACHE.checkins[u.email] : [];
+  const start = new Date(); start.setDate(start.getDate()-(days-1));
+  const startStr = start.toISOString().slice(0,10);
+  const set = new Set(ci.filter(c=>c&&c.date>=startStr).map(c=>c.date));
+  return Math.round((set.size / days) * 100);
+}
+function checkinsLastDays(ci, days){
+  const start = new Date(); start.setDate(start.getDate()-(days-1));
+  const startStr = start.toISOString().slice(0,10);
+  return (ci||[]).filter(c=>c&&c.date>=startStr);
+}
+function progDayDoneKey(email){ return 'sl_daydone_' + (email||''); }
+function getProgDayDone(email){
+  try{ return JSON.parse(localStorage.getItem(progDayDoneKey(email))||'{}'); }catch(e){ return {}; }
+}
+function setProgDayDone(email, dayKey, done){
+  const o = getProgDayDone(email);
+  if(done) o[dayKey] = 1; else delete o[dayKey];
+  try{ localStorage.setItem(progDayDoneKey(email), JSON.stringify(o)); }catch(e){}
+}
+function toggleProgDayDone(email, dayKey, el){
+  setProgDayDone(email, dayKey, !!(el&&el.checked));
+  toast(el&&el.checked ? '✅ Day marked done' : 'Day unmarked', 'g');
+}
+async function saveMyGoals(){
+  if(!CU) return;
+  const w = parseInt((document.getElementById('goalWater')||{}).value,10);
+  const s = parseInt((document.getElementById('goalSteps')||{}).value,10);
+  const sl = parseFloat((document.getElementById('goalSleep')||{}).value);
+  const unit = (document.getElementById('goalWaistUnit')||{}).value || 'in';
+  const patch = {
+    waterTargetMl: isNaN(w)?3000:w,
+    stepsTarget: isNaN(s)?10000:s,
+    sleepTarget: isNaN(sl)?7:sl,
+    waistUnit: unit==='cm'?'cm':'in'
+  };
+  try{
+    await fdb.collection('users').doc(CU.email).set(patch,{merge:true});
+    Object.assign(CU, patch);
+    if(CACHE.users[CU.email]) Object.assign(CACHE.users[CU.email], patch);
+    cacheProfileLocal(CU);
+    toast('🎯 Goals saved','g');
+    renderDash();
+    try{ renderWater(); }catch(e){}
+  }catch(e){
+    console.error(e);
+    toast('Could not save goals','r');
+  }
+}
+function setWaistUnit(unit){
+  if(!CU) return;
+  const prev = userGoals(CU).waistUnit;
+  CU.waistUnit = unit==='cm'?'cm':'in';
+  try{ fdb.collection('users').doc(CU.email).set({waistUnit:CU.waistUnit},{merge:true}); }catch(e){}
+  if(CACHE.users[CU.email]) CACHE.users[CU.email].waistUnit = CU.waistUnit;
+  cacheProfileLocal(CU);
+  const bIn=document.getElementById('wuIn'), bCm=document.getElementById('wuCm');
+  if(bIn&&bCm){bIn.classList.toggle('on',CU.waistUnit==='in');bCm.classList.toggle('on',CU.waistUnit==='cm');}
+  const inp = document.getElementById('ciWa');
+  if(inp){
+    // convert currently typed value between units
+    const cur = parseFloat(inp.value);
+    if(!isNaN(cur) && prev !== CU.waistUnit){
+      const asIn = prev==='cm' ? cur/2.54 : cur;
+      inp.value = Number(waistFromStorage(asIn, CU.waistUnit)).toFixed(1);
+      inp.dataset.storageIn = asIn;
+    }
+    const lbl=document.getElementById('ciWaL');
+    if(lbl) lbl.textContent = inp.value ? inp.value+' '+CU.waistUnit : '— '+CU.waistUnit;
+  }
+  renderDash();
+  toast('Waist unit: ' + CU.waistUnit, 'g');
+}
+function renderClientAlerts(u, ci){
+  const stack = document.getElementById('clientAlertStack');
+  if(!stack || !u || VIEWUSER) { if(stack) stack.style.display='none'; return; }
+  const alerts = [];
+  const last = lastCheckinDate(ci);
+  const gap = daysSinceDate(last);
+  if(!last){
+    alerts.push({cls:'warn', html:'📝 <strong>No check-in yet.</strong> Log today to start your streak.',
+      actions:`<button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="goTab('checkin',document.getElementById('tbCheckin'))">Log check-in</button>`});
+  } else if(gap >= 2){
+    alerts.push({cls:'warn', html:`⏰ <strong>Missed check-in:</strong> last log was ${gap} days ago (${last}).`,
+      actions:`<button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="goTab('checkin',document.getElementById('tbCheckin'))">Check in now</button>`});
+  }
+  const weekCi = checkinsLastDays(ci, 7);
+  if(weekCi.length >= 5){
+    const dismissed = localStorage.getItem('sl_week_review_' + today());
+    if(!dismissed){
+      const lastW = weekCi[weekCi.length-1];
+      const firstW = weekCi[0];
+      const wChange = (lastW.weight!=null && firstW.weight!=null) ? (lastW.weight - firstW.weight) : null;
+      const msg = encodeURIComponent(`Hi coach — weekly review:\\nCheck-ins this week: ${weekCi.length}\\nWeight change: ${wChange==null?'n/a':(wChange>0?'+':'')+Number(wChange).toFixed(1)+' kg'}\\nThanks!`);
+      alerts.push({cls:'info', html:`📋 <strong>Weekly review ready.</strong> ${weekCi.length} check-ins in the last 7 days. Share a summary with your coach?`,
+        actions:`<button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="messageCoach(decodeURIComponent('${msg}'))">Send to coach</button>
+                 <button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="localStorage.setItem('sl_week_review_'+today(),'1');renderDash()">Dismiss</button>`});
+    }
+  }
+  const lastPhoto = lastPhotoDate(u.email);
+  const photoGap = daysSinceDate(lastPhoto);
+  if(!lastPhoto || photoGap >= 14){
+    const dismissedP = localStorage.getItem('sl_photo_prompt_' + today());
+    if(!dismissedP){
+      alerts.push({cls:'info', html: !lastPhoto
+        ? '📷 <strong>Add progress photos</strong> so you and your coach can see visual changes.'
+        : `📷 <strong>Photo check-in:</strong> last photos were ${photoGap} days ago.`,
+        actions:`<button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="goTab('photos',document.getElementById('tbPhotos'))">Open Photos</button>
+                 <button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="localStorage.setItem('sl_photo_prompt_'+today(),'1');renderDash()">Later</button>`});
+    }
+  }
+  if(!alerts.length){ stack.style.display='none'; stack.innerHTML=''; return; }
+  stack.style.display='flex';
+  stack.innerHTML = alerts.map(a=>`<div class="alert-card ${a.cls}">${a.html}<div class="alert-actions">${a.actions||''}</div></div>`).join('');
+}
+function renderGoalProgress(u, ci){
+  const wrap = document.getElementById('goalProgressWrap');
+  if(!wrap || !u) { if(wrap) wrap.style.display='none'; return; }
+  const g = userGoals(u);
+  const last = ci.length ? ci.reduce((a,b)=>a.date>b.date?a:b) : null;
+  const water = last ? waterToMl(last.water||0) : 0;
+  const steps = last ? (last.steps||0) : 0;
+  const sleep = last ? (last.sleep||0) : 0;
+  const adh = adherencePct(u, 14);
+  const wPct = Math.min(100, Math.round((water/g.waterMl)*100));
+  const sPct = Math.min(100, Math.round((steps/g.steps)*100));
+  const slPct = Math.min(100, Math.round((sleep/g.sleep)*100));
+  wrap.style.display='block';
+  wrap.innerHTML = `
+    <div class="goal-grid">
+      <div class="goal-card"><div class="gc-lbl">Water goal</div><div class="gc-val">${formatWater(water)}</div><div class="gc-sub">Target ${formatWater(g.waterMl)}</div><div class="gc-bar"><i style="width:${wPct}%"></i></div></div>
+      <div class="goal-card"><div class="gc-lbl">Steps goal</div><div class="gc-val">${Number(steps).toLocaleString()}</div><div class="gc-sub">Target ${g.steps.toLocaleString()}</div><div class="gc-bar"><i style="width:${sPct}%"></i></div></div>
+      <div class="goal-card"><div class="gc-lbl">Sleep goal</div><div class="gc-val">${sleep||'—'} h</div><div class="gc-sub">Target ${g.sleep} h</div><div class="gc-bar"><i style="width:${slPct}%"></i></div></div>
+      <div class="goal-card"><div class="gc-lbl">Adherence 14d</div><div class="gc-val">${adh}%</div><div class="gc-sub">Check-in days / 14</div><div class="gc-bar"><i style="width:${adh}%"></i></div></div>
+    </div>
+    ${!VIEWUSER?`<div class="card" style="margin-bottom:12px">
+      <div class="card-lbl">Your daily targets</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><div class="fl">Water (ml)</div><input class="fi" id="goalWater" type="number" value="${g.waterMl}"></div>
+        <div><div class="fl">Steps</div><input class="fi" id="goalSteps" type="number" value="${g.steps}"></div>
+        <div><div class="fl">Sleep (hrs)</div><input class="fi" id="goalSleep" type="number" step="0.5" value="${g.sleep}"></div>
+        <div><div class="fl">Waist unit</div>
+          <select class="fi" id="goalWaistUnit"><option value="in" ${g.waistUnit==='in'?'selected':''}>Inches</option><option value="cm" ${g.waistUnit==='cm'?'selected':''}>Centimetres</option></select>
+        </div>
+      </div>
+      <button class="b-secondary" style="margin-top:10px" onclick="saveMyGoals()">Save targets</button>
+    </div>`:''}`;
+}
+function renderAdminRiskAndBulk(){
+  if(!CU || CU.role!=='admin') return;
+  const panel = document.getElementById('adminRiskPanel');
+  const bulk = document.getElementById('adminBulkBar');
+  const d = gDB();
+  const approved = Object.values(d.users||{}).filter(u=>u.role!=='admin' && u.status==='approved');
+  const risks = [];
+  approved.forEach(u=>{
+    const ci = Array.isArray(d.checkins[u.email])?d.checkins[u.email]:[];
+    const last = lastCheckinDate(ci);
+    const gap = daysSinceDate(last);
+    const adh = adherencePct(u,14);
+    const reasons = [];
+    if(!last || gap>=3) reasons.push(!last?'no check-ins':`no check-in ${gap}d`);
+    if(adh < 40 && ci.length) reasons.push(`low adherence ${adh}%`);
+    if(ci.length>=2){
+      const sorted=[...ci].sort((a,b)=>a.date.localeCompare(b.date));
+      const a=sorted[sorted.length-1], b=sorted[Math.max(0,sorted.length-4)];
+      if(a&&b&&a.weight!=null&&b.weight!=null && (a.weight-b.weight)>=1.5) reasons.push(`weight +${(a.weight-b.weight).toFixed(1)}kg`);
+    }
+    if(reasons.length) risks.push({u, reasons, gap, adh});
+  });
+  risks.sort((a,b)=>b.gap-a.gap);
+  if(panel){
+    if(!risks.length){
+      panel.innerHTML = `<div class="risk-panel" style="border-color:rgba(255,214,0,.3)"><h4 style="color:var(--grn)">Needs attention</h4><div class="risk-item">All clear — no at-risk clients right now.</div></div>`;
+    } else {
+      panel.innerHTML = `<div class="risk-panel"><h4>Needs attention (${risks.length})</h4>${risks.slice(0,12).map(r=>`
+        <div class="risk-item"><strong>${escHtml(r.u.name)}</strong> — ${escHtml(r.reasons.join(' · '))}
+          <button class="approve-btn" style="margin-left:8px;padding:4px 8px;font-size:10px" onclick="viewMember('${r.u.email}')">View</button>
+          <button class="approve-btn" style="padding:4px 8px;font-size:10px" onclick="messageCoach('Hi ${escHtml(r.u.name).split(' ')[0]}, checking in from Shredlane — how are you getting on?')">Msg</button>
+        </div>`).join('')}</div>`;
+    }
+  }
+  if(bulk){
+    bulk.style.display='block';
+    bulk.innerHTML = `<div class="card" style="margin:0">
+      <div class="card-lbl">Bulk message (opens WhatsApp per client)</div>
+      <textarea class="fi" id="bulkMsgText" style="min-height:60px" placeholder="Message to all approved clients">Quick reminder from Shredlane — log today's check-in when you can. You've got this.</textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="approve-btn" onclick="bulkMessageClients()">Send to all approved</button>
+        <button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="coachBackupReminder(true)">Backup tip</button>
+      </div>
+      <div style="font-size:11px;color:var(--gry);margin-top:6px">Sends one WhatsApp link at a time for the first 15 clients (phone numbers not stored — uses message text only via wa.me share).</div>
+    </div>`;
+  }
+}
+function bulkMessageClients(){
+  const text = (document.getElementById('bulkMsgText')||{}).value || 'Reminder from Shredlane';
+  const approved = Object.values(gDB().users||{}).filter(u=>u.role!=='admin'&&u.status==='approved');
+  if(!approved.length){ toast('No approved clients','a'); return; }
+  // Without phone numbers we copy message and open generic wa share for coach to pick recipients
+  const msg = encodeURIComponent(text);
+  try{
+    navigator.clipboard.writeText(text);
+  }catch(e){}
+  window.open('https://wa.me/?text='+msg, '_blank');
+  toast('Message copied — WhatsApp opened. Paste/send to your client list.','g');
+}
+function coachBackupReminder(force){
+  if(!CU || CU.role!=='admin') return;
+  const key = 'sl_backup_tip_' + today().slice(0,7); // once a month
+  if(!force && localStorage.getItem(key)) return;
+  localStorage.setItem(key,'1');
+  toast('☁️ Backup tip: your client data lives in Firebase. Export CSV/PDF for any client from Admin anytime.','a');
+}
+function exportUserWeekPDF(email){
+  // Prefer existing exportUserPDF if present
+  if(typeof exportUserPDF === 'function'){
+    exportUserPDF(email);
+    return;
+  }
+  toast('PDF export unavailable','r');
+}
+
+
 async function saveCI(){
   if(!CU)return;
   if(CU.status==='pending'){toast('⏳ Your account is awaiting coach approval — check-ins are locked until then.','a');return;}
   const wt=parseFloat(document.getElementById('ciWt').value);
-  const wa=parseFloat(document.getElementById('ciWa').value);
+  const _waUnit=(typeof userGoals==='function'&&CU)?userGoals(CU).waistUnit:'in';
+  const wa=waistToStorage(document.getElementById('ciWa').value, _waUnit);
   const st=parseInt(document.getElementById('ciSt').value)||0;
   const sl=parseFloat(document.getElementById('sleepR').value);
   const hu=parseInt(document.getElementById('hungR').value);
@@ -1727,7 +2014,7 @@ async function saveCI(){
     await ref.set({entries:list});
     if(!CACHE.checkins)CACHE.checkins={};
     CACHE.checkins[CU.email]=list;
-    if(offline) toast('💾 Check-in saved on this phone — will sync when online','g');
+    if(offline) toast('💾 Offline: check-in queued on this phone — will sync when online','g');
     else toast('🔥 Check-in saved!','g');
     renderDash(); renderHistory();
   }catch(e){
@@ -1901,7 +2188,7 @@ async function saveWorkout(){
     // plain set — works offline; transactions do not
     await ref.set({entries:list});
     CACHE.workouts[u.email]=list;
-    if(offline) toast('💾 Workout saved on this phone — will sync when online','g');
+    if(offline) toast('💾 Offline: workout queued on this phone — will sync when online','g');
     else toast(wktBuilder.id?'🏋️ Workout updated!':'🏋️ Workout saved!','g');
     closeWorkoutLogger();
     renderWorkoutsScreen();
@@ -2186,7 +2473,10 @@ function renderProgramScreen(){
           <div class="prog-day-mini">
             <div class="prog-day-mini-hdr">
               <div class="prog-day-mini-nm">${escHtml(d.name)}</div>
-              <button class="b-secondary" style="width:auto;padding:6px 12px;font-size:11px" onclick="startWorkoutFromProgramDay('${mine.id}','${d.id}')">▶ Log this day</button>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <label class="day-check" style="border:none;padding:0;margin:0;gap:6px;font-size:11px;color:var(--gry)"><input type="checkbox" ${getProgDayDone(u.email)[mine.id+'_'+d.id]?'checked':''} onchange="toggleProgDayDone('${u.email}','${mine.id}_${d.id}',this)"> Done</label>
+                <button class="b-secondary" style="width:auto;padding:6px 12px;font-size:11px" onclick="startWorkoutFromProgramDay('${mine.id}','${d.id}')">▶ Log this day</button>
+              </div>
             </div>
             ${(d.exercises||[]).map(ex=>{const demo=findDemoForExercise(ex.name);return `<div class="prog-ex-mini-row"><span class="prog-ex-mini-nm">${escHtml(ex.name)}</span><span style="display:flex;align-items:center;gap:8px;"><span class="prog-ex-mini-tgt">${ex.targetSets||'—'}×${escHtml(ex.targetReps||'—')}</span>${demo?`<button class="b-secondary" style="padding:4px 10px;font-size:10px;border-radius:6px;" onclick="playDemoVideo('${demo.id}')">▶ Demo</button>`:''}</span></div>`;}).join('')||'<div style="font-size:11px;color:var(--gry2)">No exercises listed</div>'}
           </div>`).join('')||'<div style="font-size:12px;color:var(--gry)">This program has no days yet.</div>'}
@@ -2495,7 +2785,7 @@ function renderDash(){
     if(!allDone && ci.length<5){
       ob.style.display='block';
       ob.innerHTML=`<div class="onboard-card">
-        <div class="ob-ttl">🚀 Getting started</div>
+        <div class="ob-ttl">🚀 Start here (3 steps)</div>
         <div class="ob-item ${hasCI?'ob-done':''}">${hasCI?'✅':'1️⃣'} Complete your first check-in</div>
         <div class="ob-item ${hasProg?'ob-done':''}">${hasProg?'✅':'2️⃣'} Open Train — your program lives there</div>
         <div class="ob-item ${hasWkt?'ob-done':''}">${hasWkt?'✅':'3️⃣'} Log your first workout from the program</div>
@@ -2549,9 +2839,12 @@ function renderDash(){
     const last=ci[ci.length-1];
     const wDiff=last?(last.weight-u.baseWeight).toFixed(1):null;
     const waDiff=last?(last.waist-u.baseWaist).toFixed(1):null;
+    const wu=(typeof userGoals==='function'?userGoals(u).waistUnit:'in');
+    const baseWaDisp=formatWaist(u.baseWaist, wu);
+    const lastWaDisp=last?formatWaist(last.waist, wu):null;
     document.getElementById('baselineTxt').innerHTML=
-      `Starting weight: <strong style="color:var(--wht)">${u.baseWeight} kg</strong> · Starting waist: <strong style="color:var(--wht)">${u.baseWaist} in</strong>`+
-      (wDiff!==null?`<br>Change: <strong style="color:${parseFloat(wDiff)<0?'var(--grn)':'var(--red)'}">${wDiff>0?'+':''}${wDiff} kg</strong> · <strong style="color:${parseFloat(waDiff)<0?'var(--grn)':'var(--red)'}">${waDiff>0?'+':''}${waDiff} in</strong>`:'');
+      `Starting weight: <strong style="color:var(--wht)">${u.baseWeight} kg</strong> · Starting waist: <strong style="color:var(--wht)">${baseWaDisp}</strong>`+
+      (wDiff!==null?`<br>Change: <strong style="color:${parseFloat(wDiff)<0?'var(--grn)':'var(--red)'}">${wDiff>0?'+':''}${wDiff} kg</strong> · <strong style="color:${parseFloat(waDiff)<0?'var(--grn)':'var(--red)'}">${waDiff>0?'+':''}${Number(waDiff).toFixed(1)} in</strong>`:'');
   }
 
   document.getElementById('totCI').textContent=ci.length;
@@ -2560,7 +2853,11 @@ function renderDash(){
   document.getElementById('strN').textContent=ciStreak;
   // Show combined adherence under streak label if possible
   const strL=document.querySelector('.str-l');
-  if(strL)strL.textContent=wStreak?(`Day streak · ${wStreak}d train`):'Day streak';
+  if(strL){const adh=adherencePct(u,14);strL.textContent=(wStreak?(`Day streak · ${wStreak}d train`):'Day streak')+` · ${adh}% adh`;}
+  // Alerts + personal goals
+  try{ renderClientAlerts(u, ci); }catch(e){ console.error(e); }
+  try{ renderGoalProgress(u, ci); }catch(e){ console.error(e); }
+
   // Quick actions: reminders + message coach
   let qa=document.getElementById('dashQuickActions');
   if(!qa){
@@ -2579,7 +2876,7 @@ function renderDash(){
   if(!ci.length){renderSpeedo(0);renderTrend();const pc0=document.getElementById('progCard');if(pc0)pc0.style.display='none';return;}
   const last=ci[ci.length-1],prev=ci.length>1?ci[ci.length-2]:null;
   setMet('mW','mWT',last.weight,'kg',prev?.weight,true);
-  setMet('mWa','mWaT',last.waist,'in',prev?.waist,true);
+  setMet('mWa','mWaT', (userGoals(u).waistUnit==='cm'?(last.waist*2.54):last.waist), userGoals(u).waistUnit, prev?.waist!=null?(userGoals(u).waistUnit==='cm'?prev.waist*2.54:prev.waist):null, true);
   setMet('mSl','mSlT',last.sleep,'hrs',prev?.sleep,false);
   setMet('mHu','mHuT',last.hunger,'/10',prev?.hunger,true);
   document.getElementById('mHuT').textContent=HU_LBL[last.hunger]||'';
@@ -2591,10 +2888,11 @@ function renderDash(){
   if(l7.length>=2){
     pc.style.display='block';
     const fw=l7[0].weight,lw=l7[l7.length-1].weight;
-    const sh=l7.filter(c=>c.steps>=10000).length;
+    const stepGoal=(typeof userGoals==='function'?userGoals(u).steps:10000);
+    const sh=l7.filter(c=>(c.steps||0)>=stepGoal).length;
     pb.innerHTML=`
       <div class="prog-wrap"><div class="prog-hd"><span>Weight change (7 days)</span><span style="color:${lw<=fw?'var(--grn)':'var(--red)'}">${lw<=fw?'▼':'▲'} ${Math.abs(lw-fw).toFixed(1)} kg</span></div><div class="prog-trk"><div class="prog-fill" style="width:${Math.min((lw/Math.max(...l7.map(c=>c.weight)))*100,100).toFixed(0)}%;background:${lw<=fw?'var(--grn)':'var(--red)'}"></div></div></div>
-      <div class="prog-wrap" style="margin-top:10px"><div class="prog-hd"><span>Steps compliance</span><span style="color:var(--grn)">${sh}/${l7.length} days at 10K</span></div><div class="prog-trk"><div class="prog-fill" style="width:${(sh/l7.length*100).toFixed(0)}%;background:var(--grn)"></div></div></div>`;
+      <div class="prog-wrap" style="margin-top:10px"><div class="prog-hd"><span>Steps compliance</span><span style="color:var(--grn)">${sh}/${l7.length} days at ${(stepGoal/1000).toFixed(0)}K</span></div><div class="prog-trk"><div class="prog-fill" style="width:${(sh/l7.length*100).toFixed(0)}%;background:var(--grn)"></div></div></div>`;
   } else if(pc) pc.style.display='none';
 }
 
@@ -2725,6 +3023,7 @@ async function generateDemoCheckins(){
 
 const renderAdmin = requireAdmin(function renderAdmin(){
   if(!CU||CU.role!=='admin')return;
+  try{ renderAdminRiskAndBulk(); coachBackupReminder(false); }catch(e){ console.error(e); }
   const d=gDB();
   const allMembers=Object.values(d.users).filter(u=>u.role!=='admin');
   const pending=allMembers.filter(u=>u.status==='pending');
@@ -2808,6 +3107,7 @@ const renderAdmin = requireAdmin(function renderAdmin(){
           ${!isPend?`<button class="approve-btn" onclick="viewMember('${u.email}')">📊 Dashboard</button>`:''}
           ${!isPend?`<button class="approve-btn" onclick="viewMemberAs('${u.email}','workouts')">🏋️ Train</button>`:''}
           ${!isPend&&ci.length?`<button class="approve-btn" style="background:#1a2a1a;color:var(--grn);border:1px solid var(--grn)" onclick="exportUserPDF('${u.email}')">📄 PDF Report</button>`:''}
+          ${!isPend&&ci.length?`<button class="approve-btn" style="background:var(--dark2);color:var(--grn);border:1px solid var(--grn)" onclick="exportUserPDF('${u.email}')">📅 Week PDF</button>`:''}
           ${!isPend&&ci.length?`<button class="approve-btn" style="background:var(--dark2);color:var(--txt);border:1px solid var(--bdr2)" onclick="exportUserCSV('${u.email}')">⬇️ CSV</button>`:''}
           ${!isPend?`<button class="approve-btn" style="background:var(--dark2);color:var(--txt);border:1px solid var(--bdr2)" onclick="resetPassword('${u.email}')">🔑 Reset PW</button>`:''}
           <button class="reject-btn" onclick="rejectUser('${u.email}')">${isPend?'❌ Decline':'🗑️ Remove'}</button>
@@ -2816,6 +3116,7 @@ const renderAdmin = requireAdmin(function renderAdmin(){
           <div class="mcs"><div class="mcsv">${ci.length}</div><div class="mcsl">Check-ins</div></div>
           <div class="mcs"><div class="mcsv" style="color:var(--grn)">${streak}</div><div class="mcsl">Streak 🔥</div></div>
           <div class="mcs"><div class="mcsv">${ci.filter(c=>(c.steps||0)>=10000).length}</div><div class="mcsl">10K Days</div></div>
+          <div class="mcs"><div class="mcsv" style="color:${adherencePct(u,14)<40?'var(--red)':'var(--grn)'}">${adherencePct(u,14)}%</div><div class="mcsl">Adh 14d</div></div>
         </div>`:''}
         ${last&&!isPend?`<div class="mc-last">
           Last: ${escHtml(last.date)} · Wt: <strong style="color:${wDiff&&parseFloat(wDiff)<0?'var(--grn)':'var(--red)'}">${last.weight}kg${wDiff!==null?' ('+(parseFloat(wDiff)>0?'+':'')+wDiff+'kg)':''}</strong> · Waist: <strong style="color:${waDiff&&parseFloat(waDiff)<0?'var(--grn)':'var(--red)'}">${last.waist}in${waDiff!==null?' ('+(parseFloat(waDiff)>0?'+':'')+waDiff+'in)':''}</strong> · Steps: ${(last.steps||0).toLocaleString()} · Sleep: ${escHtml(last.sleep)}h · Hunger: ${escHtml(last.hunger)}/10
