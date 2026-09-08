@@ -1779,6 +1779,7 @@ function toggleProgDayDone(email, dayKey, el){
 }
 async function saveMyGoals(){
   if(!CU) return;
+  if(CU.role!=='admin'){ toast('Your coach sets your targets','a'); return; }
   const w = parseInt((document.getElementById('goalWater')||{}).value,10);
   const s = parseInt((document.getElementById('goalSteps')||{}).value,10);
   const sl = parseFloat((document.getElementById('goalSleep')||{}).value);
@@ -1829,45 +1830,52 @@ function setWaistUnit(unit){
 function renderClientAlerts(u, ci){
   const stack = document.getElementById('clientAlertStack');
   if(!stack || !u || VIEWUSER) { if(stack) stack.style.display='none'; return; }
-  const alerts = [];
+  // One alert only — highest priority first
+  // 1) Missed / missing check-in  2) Photo (14d)  3) Weekly review
+  let alert = null;
   const last = lastCheckinDate(ci);
   const gap = daysSinceDate(last);
   if(!last){
-    alerts.push({cls:'warn', html:'📝 <strong>No check-in yet.</strong> Log today to start your streak.',
-      actions:`<button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="goTab('checkin',document.getElementById('tbCheckin'))">Log check-in</button>`});
+    alert = {cls:'warn', html:'📝 <strong>No check-in yet.</strong> Log today to start your streak.',
+      actions:`<button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="goTab('checkin',document.getElementById('tbCheckin'))">Log check-in</button>`};
   } else if(gap >= 2){
-    alerts.push({cls:'warn', html:`⏰ <strong>Missed check-in:</strong> last log was ${gap} days ago (${last}).`,
-      actions:`<button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="goTab('checkin',document.getElementById('tbCheckin'))">Check in now</button>`});
+    alert = {cls:'warn', html:`⏰ <strong>Missed check-in:</strong> last log was ${gap} days ago (${last}).`,
+      actions:`<button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="goTab('checkin',document.getElementById('tbCheckin'))">Check in now</button>`};
   }
-  const weekCi = checkinsLastDays(ci, 7);
-  if(weekCi.length >= 5){
-    const dismissed = localStorage.getItem('sl_week_review_' + today());
-    if(!dismissed){
-      const lastW = weekCi[weekCi.length-1];
-      const firstW = weekCi[0];
-      const wChange = (lastW.weight!=null && firstW.weight!=null) ? (lastW.weight - firstW.weight) : null;
-      const msg = encodeURIComponent(`Hi coach — weekly review:\\nCheck-ins this week: ${weekCi.length}\\nWeight change: ${wChange==null?'n/a':(wChange>0?'+':'')+Number(wChange).toFixed(1)+' kg'}\\nThanks!`);
-      alerts.push({cls:'info', html:`📋 <strong>Weekly review ready.</strong> ${weekCi.length} check-ins in the last 7 days. Share a summary with your coach?`,
-        actions:`<button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="messageCoach(decodeURIComponent('${msg}'))">Send to coach</button>
-                 <button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="localStorage.setItem('sl_week_review_'+today(),'1');renderDash()">Dismiss</button>`});
+  if(!alert){
+    const lastPhoto = lastPhotoDate(u.email);
+    const photoGap = daysSinceDate(lastPhoto);
+    if(!lastPhoto || photoGap >= 14){
+      const dismissedP = localStorage.getItem('sl_photo_prompt_' + today());
+      if(!dismissedP){
+        alert = {cls:'info', html: !lastPhoto
+          ? '📷 <strong>Add progress photos</strong> (aim for every Sunday).'
+          : `📷 <strong>Photo check-in:</strong> last photos were ${photoGap} days ago — Sunday is a great day to upload.`,
+          actions:`<button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="goTab('photos',document.getElementById('tbPhotos'))">Open Photos</button>
+                   <button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="localStorage.setItem('sl_photo_prompt_'+today(),'1');renderDash()">Later</button>`};
+      }
     }
   }
-  const lastPhoto = lastPhotoDate(u.email);
-  const photoGap = daysSinceDate(lastPhoto);
-  if(!lastPhoto || photoGap >= 14){
-    const dismissedP = localStorage.getItem('sl_photo_prompt_' + today());
-    if(!dismissedP){
-      alerts.push({cls:'info', html: !lastPhoto
-        ? '📷 <strong>Add progress photos</strong> so you and your coach can see visual changes.'
-        : `📷 <strong>Photo check-in:</strong> last photos were ${photoGap} days ago.`,
-        actions:`<button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="goTab('photos',document.getElementById('tbPhotos'))">Open Photos</button>
-                 <button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="localStorage.setItem('sl_photo_prompt_'+today(),'1');renderDash()">Later</button>`});
+  if(!alert){
+    const weekCi = checkinsLastDays(ci, 7);
+    if(weekCi.length >= 5){
+      const dismissed = localStorage.getItem('sl_week_review_' + today());
+      if(!dismissed){
+        const lastW = weekCi[weekCi.length-1];
+        const firstW = weekCi[0];
+        const wChange = (lastW.weight!=null && firstW.weight!=null) ? (lastW.weight - firstW.weight) : null;
+        const msg = encodeURIComponent(`Hi coach — weekly review:\\nCheck-ins this week: ${weekCi.length}\\nWeight change: ${wChange==null?'n/a':(wChange>0?'+':'')+Number(wChange).toFixed(1)+' kg'}\\nThanks!`);
+        alert = {cls:'info', html:`📋 <strong>Weekly review ready.</strong> ${weekCi.length} check-ins in the last 7 days.`,
+          actions:`<button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="messageCoach(decodeURIComponent('${msg}'))">Send to coach</button>
+                   <button class="b-secondary" style="width:auto;padding:8px 12px;font-size:12px" onclick="localStorage.setItem('sl_week_review_'+today(),'1');renderDash()">Dismiss</button>`};
+      }
     }
   }
-  if(!alerts.length){ stack.style.display='none'; stack.innerHTML=''; return; }
+  if(!alert){ stack.style.display='none'; stack.innerHTML=''; return; }
   stack.style.display='flex';
-  stack.innerHTML = alerts.map(a=>`<div class="alert-card ${a.cls}">${a.html}<div class="alert-actions">${a.actions||''}</div></div>`).join('');
+  stack.innerHTML = `<div class="alert-card ${alert.cls}">${alert.html}<div class="alert-actions">${alert.actions||''}</div></div>`;
 }
+
 function renderGoalProgress(u, ci){
   const wrap = document.getElementById('goalProgressWrap');
   if(!wrap || !u) { if(wrap) wrap.style.display='none'; return; }
@@ -1883,24 +1891,13 @@ function renderGoalProgress(u, ci){
   wrap.style.display='block';
   wrap.innerHTML = `
     <div class="goal-grid">
-      <div class="goal-card"><div class="gc-lbl">Water goal</div><div class="gc-val">${formatWater(water)}</div><div class="gc-sub">Target ${formatWater(g.waterMl)}</div><div class="gc-bar"><i style="width:${wPct}%"></i></div></div>
-      <div class="goal-card"><div class="gc-lbl">Steps goal</div><div class="gc-val">${Number(steps).toLocaleString()}</div><div class="gc-sub">Target ${g.steps.toLocaleString()}</div><div class="gc-bar"><i style="width:${sPct}%"></i></div></div>
-      <div class="goal-card"><div class="gc-lbl">Sleep goal</div><div class="gc-val">${sleep||'—'} h</div><div class="gc-sub">Target ${g.sleep} h</div><div class="gc-bar"><i style="width:${slPct}%"></i></div></div>
+      <div class="goal-card"><div class="gc-lbl">Water goal</div><div class="gc-val">${formatWater(water)}</div><div class="gc-sub">Target ${formatWater(g.waterMl)} · set by coach</div><div class="gc-bar"><i style="width:${wPct}%"></i></div></div>
+      <div class="goal-card"><div class="gc-lbl">Steps goal</div><div class="gc-val">${Number(steps).toLocaleString()}</div><div class="gc-sub">Target ${g.steps.toLocaleString()} · set by coach</div><div class="gc-bar"><i style="width:${sPct}%"></i></div></div>
+      <div class="goal-card"><div class="gc-lbl">Sleep goal</div><div class="gc-val">${sleep||'—'} h</div><div class="gc-sub">Target ${g.sleep} h · set by coach</div><div class="gc-bar"><i style="width:${slPct}%"></i></div></div>
       <div class="goal-card"><div class="gc-lbl">Adherence 14d</div><div class="gc-val">${adh}%</div><div class="gc-sub">Check-in days / 14</div><div class="gc-bar"><i style="width:${adh}%"></i></div></div>
-    </div>
-    ${!VIEWUSER?`<div class="card" style="margin-bottom:12px">
-      <div class="card-lbl">Your daily targets</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><div class="fl">Water (ml)</div><input class="fi" id="goalWater" type="number" value="${g.waterMl}"></div>
-        <div><div class="fl">Steps</div><input class="fi" id="goalSteps" type="number" value="${g.steps}"></div>
-        <div><div class="fl">Sleep (hrs)</div><input class="fi" id="goalSleep" type="number" step="0.5" value="${g.sleep}"></div>
-        <div><div class="fl">Waist unit</div>
-          <select class="fi" id="goalWaistUnit"><option value="in" ${g.waistUnit==='in'?'selected':''}>Inches</option><option value="cm" ${g.waistUnit==='cm'?'selected':''}>Centimetres</option></select>
-        </div>
-      </div>
-      <button class="b-secondary" style="margin-top:10px" onclick="saveMyGoals()">Save targets</button>
-    </div>`:''}`;
+    </div>`;
 }
+
 function renderAdminRiskAndBulk(){
   if(!CU || CU.role!=='admin') return;
   const panel = document.getElementById('adminRiskPanel');
@@ -2419,6 +2416,30 @@ async function assignProgramToUser(email,programId){
     renderProgramScreen();
     renderAdmin();
   }catch(e){console.error(e);toast('⚠️ Could not update — check connection','r');}
+}
+
+
+async function saveCoachTargets(email){
+  if(!CU || CU.role!=='admin'){ toast('Admin only','r'); return; }
+  const id = email.replace(/[^a-zA-Z0-9]/g,'_');
+  const w = parseInt((document.getElementById('tgW-'+id)||{}).value,10);
+  const s = parseInt((document.getElementById('tgS-'+id)||{}).value,10);
+  const sl = parseFloat((document.getElementById('tgSl-'+id)||{}).value);
+  const unit = (document.getElementById('tgU-'+id)||{}).value || 'in';
+  const patch = {
+    waterTargetMl: isNaN(w) ? 3000 : Math.max(500, w),
+    stepsTarget: isNaN(s) ? 10000 : Math.max(1000, s),
+    sleepTarget: isNaN(sl) ? 7 : Math.max(4, sl),
+    waistUnit: unit === 'cm' ? 'cm' : 'in'
+  };
+  try{
+    await fdb.collection('users').doc(email).set(patch, {merge:true});
+    if(CACHE.users[email]) Object.assign(CACHE.users[email], patch);
+    toast('🎯 Targets saved for '+email,'g');
+  }catch(e){
+    console.error(e);
+    toast('Could not save targets','r');
+  }
 }
 
 async function saveCoachNote(email){
@@ -3101,6 +3122,21 @@ const renderAdmin = requireAdmin(function renderAdmin(){
           <div style="font-size:11px;color:var(--gry);font-weight:600;margin-bottom:4px">💬 Coach note (shown on their dashboard)</div>
           <textarea class="fi" style="min-height:52px;font-size:12px;width:100%" id="cn-${u.email.replace(/[^a-zA-Z0-9]/g,'_')}" placeholder="e.g. Focus on form this week — great consistency!">${escHtml(u.coachNote||'')}</textarea>
           <button class="approve-btn" style="margin-top:6px;padding:6px 12px;font-size:11px" onclick="saveCoachNote('${u.email}')">Save note</button>
+        </div>`:''}
+        ${!isPend?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr)">
+          <div style="font-size:11px;color:var(--gry);font-weight:600;margin-bottom:6px">🎯 Daily targets (coach sets these)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><div class="fl" style="font-size:10px">Water (ml)</div><input class="fi" style="font-size:12px;padding:8px" id="tgW-${u.email.replace(/[^a-zA-Z0-9]/g,'_')}" type="number" value="${u.waterTargetMl||3000}"></div>
+            <div><div class="fl" style="font-size:10px">Steps</div><input class="fi" style="font-size:12px;padding:8px" id="tgS-${u.email.replace(/[^a-zA-Z0-9]/g,'_')}" type="number" value="${u.stepsTarget||10000}"></div>
+            <div><div class="fl" style="font-size:10px">Sleep (hrs)</div><input class="fi" style="font-size:12px;padding:8px" id="tgSl-${u.email.replace(/[^a-zA-Z0-9]/g,'_')}" type="number" step="0.5" value="${u.sleepTarget||7}"></div>
+            <div><div class="fl" style="font-size:10px">Waist unit</div>
+              <select class="fi" style="font-size:12px;padding:8px" id="tgU-${u.email.replace(/[^a-zA-Z0-9]/g,'_')}">
+                <option value="in" ${(u.waistUnit||'in')==='in'?'selected':''}>Inches</option>
+                <option value="cm" ${u.waistUnit==='cm'?'selected':''}>Centimetres</option>
+              </select>
+            </div>
+          </div>
+          <button class="approve-btn" style="margin-top:8px;padding:6px 12px;font-size:11px" onclick="saveCoachTargets('${u.email}')">Save targets</button>
         </div>`:''}
         <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
           ${isPend?`<button class="approve-btn" onclick="approveUser('${u.email}')">✅ Approve</button>`:''}
